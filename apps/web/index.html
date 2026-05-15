@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" content="Interactive notebook analysis of Chicago Smart Streets pilot warnings, tickets, fines, corridors, and infraction geography through April 25, 2026.">
+    <title>Chicago Smart Streets Pilot Analysis</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="chicago-early-voting-2026.css">
+    <link rel="stylesheet" href="chicago-smart-streets-pilot.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.5.0/dist/maplibre-gl.css">
+    <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.5.0/dist/maplibre-gl.js" defer></script>
+    <script src="config.js"></script>
+    <script src="chicago-smart-streets-pilot.js" defer></script>
+</head>
+<body class="ev-page streets-page">
+    <div class="ev-header streets-header">
+        <p class="ev-back">Open-source reproducible analysis</p>
+        <p class="streets-kicker">Chicago Department of Finance FOIA Analysis</p>
+        <h1>Chicago Smart Streets Pilot</h1>
+        <p class="ev-subtitle">Analysis of a Chicago Department of Finance FOIA obtained by <a href="https://bsky.app/profile/acannon.bsky.social/post/3mltrgwakrk2l">Alex Cannon</a>, with Smart Streets warnings, tickets, fines, and location data through April 25, 2026.</p>
+    </div>
+
+    <main class="ev-main streets-main">
+        <section class="streets-lede" id="streets-lede" aria-live="polite"></section>
+
+        <section class="ev-cards streets-cards" id="streets-cards" aria-label="Smart Streets summary cards"></section>
+
+        <section class="streets-section">
+            <div class="streets-section-header">
+                <p class="streets-section-step">1 / Context</p>
+                <h2 class="ev-section-title">What The Pilot Is Testing</h2>
+                <p class="streets-section-copy">The core policy question is whether automated enforcement can keep scarce street space clear enough for bus riders, bicyclists, and curb users without relying only on manual enforcement.</p>
+            </div>
+            <div class="streets-context-grid">
+                <article class="streets-context-panel">
+                    <h3>Authority</h3>
+                    <p>The Smart Streets chapter authorizes camera-based parking enforcement on public transit vehicles, city vehicles, city property, and locations identified by CDOT inside the pilot area.</p>
+                    <a href="https://codelibrary.amlegal.com/codes/chicago/latest/chicago_il/0-0-0-2647996">Municipal Code Chapter 9-108</a>
+                </article>
+                <article class="streets-context-panel">
+                    <h3>Warnings First</h3>
+                    <p>The ordinance provides a 30-day installation warning period and a first-offense warning before a citation for covered offenses enforced through the program.</p>
+                    <a href="https://chicago.legistar.com/View.ashx?GUID=615C8724-6B43-4A5B-9DFF-D03A0D071320&amp;ID=11745727&amp;M=F">2023 ordinance PDF</a>
+                </article>
+                <article class="streets-context-panel">
+                    <h3>CTA Expansion</h3>
+                    <p>CTA added six bus-mounted Automated Bus Lane Enforcement systems in October 2025, after city vehicles had already started Smart Streets operations.</p>
+                    <a href="https://www.transitchicago.com/city-of-chicago-and-cta-expand-smart-streets-pilot-with-automated-bus-lane-enforcement-technology-aimed-at-improving-safety-and-bus-service-reliability/">CTA launch release</a>
+                </article>
+            </div>
+        </section>
+
+        <section class="streets-section">
+            <div class="streets-section-header">
+                <p class="streets-section-step">2 / Geography</p>
+                <h2 class="ev-section-title">Where Infractions Cluster</h2>
+                <p class="streets-section-copy">The map starts with an aggregate All Violations layer to show overall clustering by location. Use the layer controls to drill into a specific violation category.</p>
+            </div>
+
+            <div class="streets-map-layout">
+                <div class="ev-map-wrap streets-map-wrap">
+                    <h3>Smart Streets Infractions</h3>
+                    <p class="ev-caption" id="streets-map-caption">All Violations, aggregated by location.</p>
+                    <div class="streets-map-legend" id="streets-map-legend"></div>
+                    <div id="streets-map" aria-label="Map of Chicago Smart Streets infractions by location and infraction type"></div>
+                    <div class="primary-map-status streets-map-status" id="streets-map-status" role="status" aria-live="polite"></div>
+                </div>
+
+                <aside class="streets-side-panel">
+                    <section class="streets-side-section">
+                        <h3>Map Layer</h3>
+                        <p class="streets-filter-note">Start with the aggregate layer, then choose one category for a cleaner drilldown.</p>
+                        <div class="streets-type-list" id="streets-map-type-list"></div>
+                    </section>
+                    <section class="streets-side-section">
+                        <h3>Ward Filter</h3>
+                        <label class="streets-select-control" for="streets-map-ward-select">
+                            <span>Show ward</span>
+                            <select id="streets-map-ward-select"></select>
+                        </label>
+                        <p class="streets-filter-note" id="streets-map-ward-note">Map includes all wards.</p>
+                    </section>
+                    <section class="streets-side-section">
+                        <h3>Top Locations</h3>
+                        <div class="streets-location-list" id="streets-map-top-locations"></div>
+                    </section>
+                </aside>
+            </div>
+        </section>
+
+        <section class="streets-section">
+            <div class="streets-section-header">
+                <p class="streets-section-step">3 / Fines</p>
+                <h2 class="ev-section-title">Fines Became Material In 2025</h2>
+            </div>
+            <div class="streets-chart-card">
+                <div class="streets-card-head">
+                    <h3>Cumulative annual fines</h3>
+                    <p>Fine levels listed in the FOIA export, grouped by issue date and calendar year.</p>
+                </div>
+                <div class="streets-svg-wrap" id="streets-annual-chart"></div>
+                <div class="streets-chart-legend" id="streets-annual-legend"></div>
+            </div>
+            <div class="streets-chart-card streets-secondary-chart">
+                <div class="streets-card-head streets-card-head-row">
+                    <div>
+                        <h3>Cumulative fines by enforcement vehicle</h3>
+                        <p>Camera IDs beginning with FI are grouped as Finance, DT as Transportation, and unprefixed IDs as CTA Bus.</p>
+                    </div>
+                    <div class="streets-segmented" id="streets-vehicle-mode" aria-label="Vehicle breakdown mode">
+                        <button type="button" class="active" data-mode="department">Departments</button>
+                        <button type="button" data-mode="vehicle">Vehicles</button>
+                    </div>
+                </div>
+                <div class="streets-svg-wrap" id="streets-vehicle-chart"></div>
+                <div class="streets-chart-legend" id="streets-vehicle-legend"></div>
+            </div>
+        </section>
+
+        <section class="streets-section">
+            <div class="streets-section-header">
+                <p class="streets-section-step">4 / Volume</p>
+                <h2 class="ev-section-title">Warnings Dominate The Violation Count</h2>
+                <p class="streets-section-copy">Most violations are warnings, but the mix changed as the pilot matured and bus-mounted cameras entered the data in October 2025.</p>
+            </div>
+            <div class="streets-chart-card">
+                <div class="streets-card-head">
+                    <h3>Monthly warnings and fines issued</h3>
+                    <p>Stacked violations by violation description.</p>
+                </div>
+                <div class="streets-svg-wrap" id="streets-monthly-chart"></div>
+                <div class="streets-chart-legend" id="streets-monthly-legend"></div>
+            </div>
+        </section>
+
+        <section class="streets-section">
+            <div class="streets-section-header">
+                <p class="streets-section-step">5 / Timing</p>
+                <h2 class="ev-section-title">When Enforcement Activity Shows Up</h2>
+            </div>
+            <div class="streets-time-layout">
+                <div class="streets-chart-card">
+                    <div class="streets-card-head streets-card-head-row">
+                        <div>
+                            <h3>Day of week</h3>
+                            <p>Violations and listed fines by weekday.</p>
+                        </div>
+                        <div class="streets-segmented" id="streets-time-metric" aria-label="Timing metric">
+                            <button type="button" class="active" data-metric="records">Violations</button>
+                            <button type="button" data-metric="fines">Fines</button>
+                        </div>
+                    </div>
+                    <div class="streets-svg-wrap" id="streets-weekday-chart"></div>
+                </div>
+
+                <div class="streets-chart-card">
+                    <div class="streets-card-head">
+                        <h3>Hour of day</h3>
+                        <p>Timestamp hour from the FOIA extract, interpreted as Chicago local time.</p>
+                    </div>
+                    <div class="streets-svg-wrap" id="streets-hourly-chart"></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="streets-section">
+            <div class="streets-section-header">
+                <p class="streets-section-step">6 / Mix</p>
+                <h2 class="ev-section-title">Bike-Lane Tickets Drive Most Fine Dollars</h2>
+                <p class="streets-section-copy">Bus-lane violations are more numerous than bike-lane tickets, but bike-lane fines carry the higher listed penalty and account for the largest dollar share.</p>
+            </div>
+            <div class="streets-mix-layout">
+                <div class="streets-chart-card">
+                    <div class="streets-card-head">
+                        <h3>2026 cumulative fines by infraction type</h3>
+                        <p>Fine-bearing categories only, through the final date in the extract.</p>
+                    </div>
+                    <div class="streets-svg-wrap" id="streets-type-area-chart"></div>
+                    <div class="streets-chart-legend" id="streets-type-area-legend"></div>
+                </div>
+
+                <aside class="streets-analysis-panel" id="streets-type-analysis"></aside>
+            </div>
+        </section>
+
+        <section class="streets-section">
+            <div class="streets-section-header">
+                <p class="streets-section-step">7 / Corridors</p>
+                <h2 class="ev-section-title">The Hotspots Are Corridor Problems</h2>
+            </div>
+            <div class="streets-category-filter" aria-label="Corridor category filter">
+                <div class="streets-category-filter-head">
+                    <div>
+                        <h3>Analyze Categories</h3>
+                        <p>Choose one or more infraction categories for the corridor and location rankings.</p>
+                    </div>
+                    <div class="streets-type-actions">
+                        <button class="streets-mini-button" type="button" id="streets-corridor-select-all">All</button>
+                        <button class="streets-mini-button" type="button" id="streets-corridor-select-fines">Fines</button>
+                        <button class="streets-mini-button" type="button" id="streets-corridor-select-warnings">Warnings</button>
+                    </div>
+                </div>
+                <div class="streets-category-filter-list" id="streets-corridor-type-list"></div>
+            </div>
+            <div class="streets-corridor-layout">
+                <div class="streets-chart-card">
+                    <div class="streets-card-head streets-card-head-row">
+                        <div>
+                            <h3>Top corridors</h3>
+                            <p id="streets-corridor-filter-note">Aggregated from the violation location string.</p>
+                        </div>
+                        <label class="streets-sort-control" for="streets-corridor-sort">
+                            <span>Sort</span>
+                            <select id="streets-corridor-sort">
+                                <option value="records">Violation volume desc</option>
+                                <option value="fines">Fine dollars desc</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="streets-bar-list" id="streets-corridor-bars"></div>
+                </div>
+
+                <div class="streets-chart-card">
+                    <div class="streets-card-head">
+                        <h3>Top locations</h3>
+                        <p>Individual address points ranked by the selected sort and category filter.</p>
+                    </div>
+                    <div class="streets-table-wrap">
+                        <table class="ev-table streets-table">
+                            <thead>
+                                <tr>
+                                    <th>Location</th>
+                                    <th class="text-right">Violations</th>
+                                    <th class="text-right">Fines</th>
+                                </tr>
+                            </thead>
+                            <tbody id="streets-location-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="streets-section streets-reference-section">
+            <div class="streets-section-header">
+                <p class="streets-section-step">8 / Ward Detail</p>
+                <h2 class="ev-section-title">Ward Detail</h2>
+                <p class="streets-section-copy">Ward totals use the same decoded violation points as the map, assigned to Chicago ward polygons from the City of Chicago Data Portal.</p>
+            </div>
+            <div class="streets-card-head streets-card-head-row streets-ward-detail-head">
+                <div>
+                    <h3>Metrics by ward</h3>
+                    <p id="streets-ward-filter-note">Showing all violation types.</p>
+                </div>
+                <div class="streets-segmented streets-segmented-wrap" id="streets-ward-type-filter" aria-label="Ward detail violation type"></div>
+            </div>
+            <div class="streets-table-wrap">
+                <table class="ev-table streets-table" id="streets-ward-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="ward" aria-sort="none" tabindex="0" role="button">Ward <span class="ev-sort-arrow">&#9650;</span></th>
+                            <th class="text-right" data-sort="records" aria-sort="none" tabindex="0" role="button">Violations <span class="ev-sort-arrow">&#9650;</span></th>
+                            <th class="text-right" data-sort="fineRecords" aria-sort="none" tabindex="0" role="button">Fine-bearing <span class="ev-sort-arrow">&#9650;</span></th>
+                            <th class="text-right" data-sort="warnings" aria-sort="none" tabindex="0" role="button">Warnings <span class="ev-sort-arrow">&#9650;</span></th>
+                            <th class="text-right" data-sort="fines" aria-sort="none" tabindex="0" role="button">Listed fines <span class="ev-sort-arrow">&#9650;</span></th>
+                            <th>Top violation type</th>
+                            <th>Top fine category</th>
+                        </tr>
+                    </thead>
+                    <tbody id="streets-ward-table-body"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="streets-section streets-design-section">
+            <div class="streets-section-header">
+                <p class="streets-section-step">9 / Street Design</p>
+                <h2 class="ev-section-title">Prevent The Violation, Not Just Ticket It</h2>
+                <p class="streets-section-copy">Enforcement is a backstop. If the same block keeps producing warnings and tickets, the street is showing where design is failing and where physical changes could make the illegal move harder or less useful in the first place.</p>
+            </div>
+
+            <div class="streets-design-callout">
+                <div>
+                    <h3>Kinzie makes the design signal visible.</h3>
+                    <p>The FOIA points show the largest Kinzie concentration on the paint-only stretch east of Wells. The protected stretch from Milwaukee Avenue to Wells Street shows a much lower bike-lane ticket signal, with 230 W Kinzie as the address-level example below.</p>
+                </div>
+                <div class="streets-kinzie-stats" id="streets-kinzie-stats"></div>
+            </div>
+
+            <div class="streets-chart-card streets-kinzie-map-card">
+                <div class="streets-card-head">
+                    <h3>Kinzie corridor design contrast</h3>
+                    <p>Bike-lane and warning points along Kinzie, with the Milwaukee-to-Wells protected stretch contrasted against the paint-only area that produced the corridor's highest bike-lane ticket concentration.</p>
+                </div>
+                <div class="streets-map-legend streets-kinzie-map-legend">
+                    <span class="streets-map-legend-item"><span class="streets-line-swatch streets-line-swatch-protected"></span> Protected bike lane: Milwaukee to Wells</span>
+                    <span class="streets-map-legend-item"><span class="streets-line-swatch streets-line-swatch-unprotected"></span> Paint-only / unprotected area</span>
+                    <span class="streets-map-legend-item"><span class="streets-legend-swatch streets-kinzie-point-swatch"></span> FOIA location point</span>
+                </div>
+                <div id="streets-kinzie-map" aria-label="Map of Kinzie Street Smart Streets violations and bike lane design segments"></div>
+                <div class="primary-map-status streets-map-status" id="streets-kinzie-map-status" role="status" aria-live="polite">Loading Kinzie map...</div>
+            </div>
+
+            <div class="streets-kinzie-photo-grid">
+                <figure class="streets-photo-card">
+                    <img src="images/smart-streets/kinzie-unprotected-169w.jpg" alt="Paint-only bike lane blocked by standing vehicles at 169 W Kinzie" loading="lazy">
+                    <figcaption>
+                        <strong>169 W Kinzie: paint-only bike lane</strong>
+                        <span>400 violations, including 97 bike-lane tickets and $24,340 in listed fines.</span>
+                        <em>Image: Apple Maps screenshot.</em>
+                    </figcaption>
+                </figure>
+                <figure class="streets-photo-card">
+                    <img src="images/smart-streets/kinzie-protected-230w.jpg" alt="Protected bike lane and curbside dining area at 230 W Kinzie" loading="lazy">
+                    <figcaption>
+                        <strong>230 W Kinzie: protected bike lane</strong>
+                        <span>No bike-lane tickets and no listed fines at this address in the FOIA extract.</span>
+                        <em>Image: Apple Maps screenshot.</em>
+                    </figcaption>
+                </figure>
+            </div>
+
+            <div class="streets-design-subhead">
+                <h3>Solution: redesign the curb so the violations do not happen</h3>
+            </div>
+
+            <div class="streets-design-grid" aria-label="Street design recommendations">
+                <article class="streets-design-card">
+                    <img src="images/smart-streets/bike-corral-daylighting.jpg" alt="Bike corral and daylighting treatment next to a bikeway" loading="lazy">
+                    <div>
+                        <h3>Protected bike lanes and daylighting</h3>
+                        <p>Bike-lane citations dominate the Kinzie fine signal. Paint-only segments should be upgraded to curb-protected bikeways, with corner space reclaimed so stopping, loading, and parking do not spill into the bike lane.</p>
+                        <p class="streets-design-focus">Start with blocks where curb friction keeps landing in the bikeway.</p>
+                        <a href="https://highways.dot.gov/safety/pedestrian-bicyclist/safety-tools/pg-102-121-separated-bike-lane-planning-and-design-guide">FHWA separated bike-lane guide</a>
+                    </div>
+                </article>
+                <article class="streets-design-card">
+                    <img src="images/smart-streets/bus-boarding-island.jpg" alt="CTA bus at a boarding island next to a protected bike lane" loading="lazy">
+                    <div>
+                        <h3>Bus boarding islands and in-lane stops</h3>
+                        <p>CTA and CDOT say bus stop bump-outs and boarding islands create dedicated rider space, let buses stop without weaving, and reduce bus-bike conflicts. They also make it much harder for drivers to idle in the stop itself.</p>
+                        <p class="streets-design-focus">Best fit for high-ridership stops where buses keep getting boxed out of the curb.</p>
+                        <a href="https://www.transitchicago.com/-city-of-chicago-completes-accessibility-improvements-at-over-100-cta-bus-stops-in-2024/">CTA/CDOT bus-stop upgrades</a>
+                    </div>
+                </article>
+                <article class="streets-design-card">
+                    <img src="images/smart-streets/protected-intersection-refuge.jpg" alt="Protected intersection with refuge islands and marked crossings" loading="lazy">
+                    <div>
+                        <h3>Corner refuge islands and raised crosswalks</h3>
+                        <p>Shorter crossings, hardened corners, and raised tables slow turns, protect pedestrian waiting space, and keep sightlines open. FHWA treats refuge islands and raised crossings as proven pedestrian safety countermeasures.</p>
+                        <p class="streets-design-focus">Prioritize bus-stop pairs, school crossings, and retail corners where blocked crosswalks and quick curb stops are common.</p>
+                        <a href="https://www.fhwa.dot.gov/innovation/innovator/issue74/sneakpeek/page_02.html">FHWA pedestrian countermeasures</a>
+                    </div>
+                </article>
+                <article class="streets-design-card">
+                    <img src="images/smart-streets/green-bumpout.jpg" alt="Planted curb extension narrowing the corner curb radius" loading="lazy">
+                    <div>
+                        <h3>Curb extensions and managed loading zones</h3>
+                        <p>Some conflicts come from curb demand with nowhere legal to go. Curb extensions and dayparted loading zones can define where deliveries, pickup, and short-term standing belong while tightening the curb edge near corners and crossings.</p>
+                        <p class="streets-design-focus">Pair managed loading space with bump-outs where corner encroachment is common.</p>
+                        <a href="https://chicago.legistar.com/View.ashx?GUID=615C8724-6B43-4A5B-9DFF-D03A0D071320&amp;ID=11745727&amp;M=F">Smart Loading Zone authority</a>
+                    </div>
+                </article>
+            </div>
+
+            <div class="streets-design-source-panel">
+                <h3>Read the data this way</h3>
+                <p>The point is not that cameras solve a street-design problem. The camera data is a diagnostic layer: when violations concentrate on the same corridor, the next response should be protected bike lanes, bus boarding islands, hardened daylighting, refuge islands, and curb-management changes that remove the recurring conflict.</p>
+                <div class="streets-design-links">
+                    <a href="https://www.transitchicago.com/betterstreetsforbuses/">Better Streets for Buses</a>
+                    <a href="https://www.transitchicago.com/newsprojects/bpz/">CTA Bus Priority Zones</a>
+                    <a href="https://highways.dot.gov/safety/pedestrian-bicyclist/safety-tools/pg-102-121-separated-bike-lane-planning-and-design-guide">FHWA bike-lane guide</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="streets-section streets-reference-section">
+            <div class="streets-section-header">
+                <p class="streets-section-step">Reference</p>
+                <h2 class="ev-section-title">Category Detail</h2>
+            </div>
+            <div class="streets-table-wrap">
+                <table class="ev-table streets-table">
+                    <thead>
+                        <tr>
+                            <th>Infraction category</th>
+                            <th class="text-right">Violations</th>
+                            <th class="text-right">Fine-bearing violations</th>
+                            <th class="text-right">Warnings</th>
+                            <th class="text-right">Listed fines</th>
+                            <th class="text-right">Fine share</th>
+                        </tr>
+                    </thead>
+                    <tbody id="streets-category-table-body"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <footer class="ev-footer streets-footer" id="streets-sources"></footer>
+    </main>
+
+    <div class="streets-chart-tooltip" id="streets-chart-tooltip" role="status" aria-live="polite"></div>
+</body>
+</html>

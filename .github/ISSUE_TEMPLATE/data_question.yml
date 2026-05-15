@@ -1,0 +1,17 @@
+name: Data or methodology question
+description: Ask about the source data, methodology, or reproducibility.
+title: "[Data]: "
+labels: ["data", "question"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What data, method, or chart do you want to understand?
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Link to the chart, source file, row, or section you are asking about.

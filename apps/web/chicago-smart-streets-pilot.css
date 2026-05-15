@@ -1,0 +1,1191 @@
+/* Chicago Smart Streets notebook */
+
+.streets-page {
+    padding: 0;
+    --streets-blue: #2364aa;
+    --streets-cyan: #12a6d8;
+    --streets-green: #009b3a;
+    --streets-red: #e9003a;
+    --streets-orange: #ff4b20;
+    --streets-navy: #09098f;
+    --streets-gray: #9c9c9c;
+    --streets-light-gray: #c9c9c9;
+    --streets-surface: color-mix(in srgb, var(--fg) 4%, var(--bg));
+    --streets-surface-strong: color-mix(in srgb, var(--fg) 7%, var(--bg));
+    --streets-border: color-mix(in srgb, var(--fg) 11%, var(--border));
+    --streets-shadow: 0 0.65rem 1.8rem rgba(15, 23, 42, 0.06);
+}
+
+.streets-page .ev-header,
+.streets-page .ev-main {
+    box-sizing: border-box;
+    width: min(100%, 1320px);
+    max-width: none;
+    padding-left: clamp(1rem, 2.8vw, 2rem);
+    padding-right: clamp(1rem, 2.8vw, 2rem);
+}
+
+.streets-kicker {
+    margin-top: 1rem;
+    color: var(--streets-blue);
+    font-size: 0.8rem;
+    font-weight: 750;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.streets-lede {
+    display: grid;
+    gap: 0.85rem;
+    max-width: 78ch;
+    margin-top: clamp(1.75rem, 3vw, 2.4rem);
+    color: var(--muted);
+    font-size: 1.02rem;
+    line-height: 1.7;
+}
+
+.streets-lede strong {
+    color: var(--fg);
+}
+
+.streets-cards {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: clamp(0.85rem, 1.5vw, 1.25rem);
+    margin-top: clamp(1.8rem, 3vw, 2.4rem);
+}
+
+.streets-cards .ev-card {
+    min-height: 8.4rem;
+    padding: 1.15rem 1.2rem;
+    border-color: var(--streets-border);
+    background: var(--streets-surface);
+    box-shadow: var(--streets-shadow);
+}
+
+.streets-cards .ev-card-value {
+    font-size: clamp(1.45rem, 2.35vw, 2rem);
+    letter-spacing: 0;
+}
+
+.streets-cards .ev-card-detail {
+    line-height: 1.45;
+}
+
+.streets-section {
+    margin-top: clamp(3.2rem, 6vw, 5rem);
+}
+
+.streets-section-header {
+    display: grid;
+    gap: 0.35rem;
+    max-width: 82ch;
+    margin-bottom: 1.2rem;
+}
+
+.streets-section-step {
+    color: var(--streets-blue);
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.streets-page .ev-section-title {
+    margin: 0;
+    padding: 0;
+    border-bottom: 0;
+    font-size: clamp(1.35rem, 2vw, 1.75rem);
+    line-height: 1.2;
+}
+
+.streets-section-copy {
+    max-width: 78ch;
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+    line-height: 1.6;
+}
+
+.streets-context-grid,
+.streets-map-layout,
+.streets-time-layout,
+.streets-mix-layout,
+.streets-corridor-layout {
+    display: grid;
+    gap: clamp(1rem, 1.8vw, 1.35rem);
+    align-items: start;
+}
+
+.streets-context-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.streets-context-panel,
+.streets-chart-card,
+.streets-side-section,
+.streets-analysis-panel {
+    border: 1px solid var(--streets-border);
+    border-radius: 8px;
+    background: var(--streets-surface);
+    box-shadow: var(--streets-shadow);
+}
+
+.streets-context-panel {
+    padding: 1.2rem 1.25rem;
+}
+
+.streets-context-panel h3,
+.streets-side-section h3,
+.streets-analysis-panel h3 {
+    font-size: 1rem;
+    font-weight: 650;
+}
+
+.streets-context-panel p,
+.streets-analysis-panel p,
+.streets-card-head p {
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.55;
+}
+
+.streets-context-panel p {
+    margin-top: 0.45rem;
+}
+
+.streets-context-panel a {
+    display: inline-block;
+    margin-top: 0.8rem;
+    font-size: 0.88rem;
+    font-weight: 650;
+}
+
+.streets-map-layout {
+    grid-template-columns: minmax(0, 1.45fr) minmax(310px, 0.55fr);
+}
+
+.streets-map-wrap {
+    min-width: 0;
+}
+
+#streets-map {
+    width: 100%;
+    height: min(72vh, 720px);
+    min-height: 540px;
+}
+
+.streets-map-status {
+    padding: 0.75rem 1.25rem 0;
+    color: var(--muted);
+    font-size: 0.82rem;
+}
+
+.streets-map-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.75rem 1.25rem 1rem;
+    color: var(--muted);
+    font-size: 0.82rem;
+}
+
+.streets-map-legend-item,
+.streets-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.streets-map-legend-toggle {
+    appearance: none;
+    padding: 0.28rem 0.45rem;
+    border: 1px solid var(--streets-border);
+    border-radius: 999px;
+    background: var(--streets-surface);
+    color: var(--fg);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 650;
+    opacity: 0.52;
+    transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.streets-map-legend-toggle:hover,
+.streets-map-legend-toggle:focus-visible {
+    border-color: color-mix(in srgb, var(--streets-blue) 45%, var(--streets-border));
+    background: var(--streets-surface-strong);
+    outline: none;
+}
+
+.streets-map-legend-toggle.is-active {
+    opacity: 1;
+}
+
+.streets-map-legend-toggle:not(.is-active) .streets-legend-swatch {
+    filter: grayscale(1);
+}
+
+.streets-legend-swatch {
+    width: 0.85rem;
+    height: 0.85rem;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--fg) 20%, transparent);
+}
+
+.streets-boundary-swatch {
+    width: 1.2rem;
+    height: 0.65rem;
+    flex: 0 0 auto;
+    border: 2px solid currentColor;
+    border-radius: 2px;
+}
+
+.streets-side-panel {
+    display: grid;
+    gap: 1rem;
+}
+
+.streets-side-section {
+    padding: 1.1rem 1.2rem;
+}
+
+.streets-type-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-top: 0.75rem;
+}
+
+.streets-mini-button,
+.streets-segmented button {
+    border: 1px solid var(--streets-border);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--fg) 4%, var(--bg));
+    color: var(--fg);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 650;
+    line-height: 1;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.streets-mini-button {
+    padding: 0.55rem 0.65rem;
+}
+
+.streets-mini-button:hover,
+.streets-segmented button:hover {
+    background: var(--streets-surface-strong);
+}
+
+.streets-type-list {
+    display: grid;
+    gap: 0.55rem;
+    margin-top: 0.9rem;
+}
+
+.streets-type-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.65rem;
+    align-items: center;
+    color: var(--muted);
+    font-size: 0.86rem;
+    line-height: 1.25;
+}
+
+.streets-type-row input {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    accent-color: var(--streets-blue);
+}
+
+.streets-type-title {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--fg);
+    font-weight: 650;
+}
+
+.streets-type-count {
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.streets-select-control {
+    display: grid;
+    gap: 0.45rem;
+    margin-top: 0.85rem;
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 650;
+}
+
+.streets-select-control select {
+    width: 100%;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid var(--streets-border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--fg);
+    font: inherit;
+}
+
+.streets-filter-note {
+    margin-top: 0.75rem;
+    color: var(--muted);
+    font-size: 0.82rem;
+    line-height: 1.4;
+}
+
+.streets-location-list {
+    display: grid;
+    gap: 0.7rem;
+    margin-top: 0.8rem;
+}
+
+.streets-location-item {
+    display: grid;
+    gap: 0.2rem;
+    padding-bottom: 0.7rem;
+    border-bottom: 1px solid var(--streets-border);
+}
+
+.streets-location-item:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+.streets-location-title {
+    color: var(--fg);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.streets-location-detail {
+    color: var(--muted);
+    font-size: 0.8rem;
+    line-height: 1.35;
+}
+
+.streets-category-filter {
+    display: grid;
+    gap: 0.9rem;
+    margin-bottom: 1rem;
+    padding: 1.05rem 1.2rem;
+    border: 1px solid var(--streets-border);
+    border-radius: 8px;
+    background: var(--streets-surface);
+    box-shadow: var(--streets-shadow);
+}
+
+.streets-category-filter-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem 1rem;
+    align-items: start;
+    justify-content: space-between;
+}
+
+.streets-category-filter-head h3 {
+    font-size: 1rem;
+    font-weight: 650;
+}
+
+.streets-category-filter-head p {
+    margin-top: 0.2rem;
+    color: var(--muted);
+    font-size: 0.88rem;
+    line-height: 1.45;
+}
+
+.streets-category-filter-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.streets-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 2.15rem;
+    padding: 0.42rem 0.6rem;
+    border: 1px solid var(--streets-border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--fg) 3%, var(--bg));
+    color: var(--fg);
+    font-size: 0.82rem;
+    font-weight: 650;
+    line-height: 1.2;
+    cursor: pointer;
+}
+
+.streets-filter-chip input {
+    width: 0.95rem;
+    height: 0.95rem;
+    margin: 0;
+    accent-color: var(--streets-blue);
+}
+
+.streets-empty-state {
+    padding: 0.25rem 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+.streets-chart-card {
+    overflow: hidden;
+}
+
+.streets-secondary-chart {
+    margin-top: 1.1rem;
+}
+
+.streets-card-head {
+    padding: 1.2rem 1.35rem 0.5rem;
+}
+
+.streets-card-head-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: start;
+    justify-content: space-between;
+}
+
+.streets-card-head h3 {
+    font-size: 1rem;
+    font-weight: 650;
+}
+
+.streets-card-head p {
+    margin-top: 0.2rem;
+    max-width: 72ch;
+}
+
+.streets-svg-wrap {
+    width: 100%;
+    padding: 0.65rem 1.15rem 1.1rem;
+}
+
+.streets-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.streets-svg text {
+    font-family: inherit;
+}
+
+.streets-svg .streets-hover-target {
+    cursor: pointer;
+}
+
+.streets-data-label {
+    fill: var(--fg);
+    font-weight: 700;
+    pointer-events: none;
+}
+
+.streets-chart-annotation {
+    fill: var(--fg);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.streets-annotation-dot {
+    fill: var(--fg);
+}
+
+.streets-chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+    padding: 0 1.25rem 1rem;
+    color: var(--muted);
+    font-size: 0.82rem;
+}
+
+.streets-mix-layout {
+    grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+}
+
+.streets-time-layout {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+}
+
+.streets-analysis-panel {
+    padding: 1.2rem 1.35rem;
+}
+
+.streets-analysis-panel p {
+    margin-top: 0.7rem;
+}
+
+.streets-analysis-panel strong {
+    color: var(--fg);
+}
+
+.streets-analysis-list {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.streets-analysis-row {
+    display: grid;
+    gap: 0.18rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--streets-border);
+}
+
+.streets-analysis-value {
+    color: var(--fg);
+    font-size: 1.25rem;
+    font-weight: 750;
+    line-height: 1.1;
+}
+
+.streets-analysis-label {
+    color: var(--muted);
+    font-size: 0.82rem;
+}
+
+.streets-corridor-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 0.72fr);
+}
+
+.streets-segmented {
+    display: inline-flex;
+    overflow: hidden;
+    border: 1px solid var(--streets-border);
+    border-radius: 8px;
+}
+
+.streets-segmented-wrap {
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    overflow: visible;
+    border: 0;
+}
+
+.streets-segmented button {
+    border: 0;
+    border-radius: 0;
+    padding: 0.55rem 0.7rem;
+}
+
+.streets-segmented-wrap button {
+    border: 1px solid var(--streets-border);
+    border-radius: 8px;
+}
+
+.streets-segmented button.active {
+    background: var(--fg);
+    color: var(--bg);
+}
+
+.streets-sort-control {
+    display: inline-flex;
+    gap: 0.45rem;
+    align-items: center;
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 650;
+}
+
+.streets-sort-control select {
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--streets-border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--fg);
+    font: inherit;
+    font-weight: 650;
+}
+
+.streets-bar-list {
+    display: grid;
+    gap: 0.85rem;
+    padding: 0.8rem 1.35rem 1.35rem;
+}
+
+.streets-grouped-bar-row {
+    display: grid;
+    grid-template-columns: minmax(7rem, 0.24fr) minmax(0, 1fr);
+    gap: 0.65rem 1rem;
+    align-items: start;
+    color: var(--muted);
+    font-size: 0.86rem;
+}
+
+.streets-bar-name {
+    overflow: hidden;
+    color: var(--fg);
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.streets-grouped-bars {
+    display: grid;
+    gap: 0.32rem;
+    min-width: 0;
+}
+
+.streets-grouped-bar-line {
+    display: grid;
+    grid-template-columns: minmax(4.8rem, auto) minmax(0, 1fr) minmax(6.5rem, auto);
+    gap: 0.55rem;
+    align-items: center;
+}
+
+.streets-bar-metric {
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.streets-bar-track {
+    height: 0.58rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--fg) 8%, var(--bg));
+}
+
+.streets-bar-fill {
+    height: 100%;
+    min-width: 2px;
+    border-radius: inherit;
+    background: var(--streets-blue);
+}
+
+.streets-bar-fill-fines {
+    background: var(--streets-green);
+}
+
+.streets-bar-value {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.streets-table-wrap {
+    overflow-x: auto;
+    padding: 0.8rem 1.35rem 1.35rem;
+}
+
+.streets-table {
+    width: 100%;
+}
+
+.streets-table .streets-table-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+#streets-ward-table thead th[role="button"] {
+    cursor: pointer;
+    user-select: none;
+}
+
+#streets-ward-table thead th[role="button"]:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--streets-blue) 55%, transparent);
+    outline-offset: -2px;
+}
+
+.streets-reference-section .streets-table-wrap {
+    padding: 0;
+    border: 1px solid var(--streets-border);
+    border-radius: 8px;
+    background: var(--streets-surface);
+    box-shadow: var(--streets-shadow);
+}
+
+.streets-ward-detail-head {
+    margin-bottom: 0.85rem;
+    padding: 1.05rem 1.2rem;
+    border: 1px solid var(--streets-border);
+    border-radius: 8px;
+    background: var(--streets-surface);
+    box-shadow: var(--streets-shadow);
+}
+
+.streets-design-section {
+    --kinzie-protected: #009b3a;
+    --kinzie-unprotected: #d97706;
+}
+
+.streets-design-callout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.52fr);
+    gap: 1rem;
+    align-items: stretch;
+    margin-bottom: 1.1rem;
+    padding: 1.15rem 1.25rem;
+    border: 1px solid var(--streets-border);
+    border-radius: 8px;
+    background: var(--streets-surface);
+    box-shadow: var(--streets-shadow);
+}
+
+.streets-design-callout h3,
+.streets-design-source-panel h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.streets-design-callout p,
+.streets-design-source-panel p,
+.streets-design-card p,
+.streets-photo-card figcaption span,
+.streets-photo-card figcaption em {
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.55;
+}
+
+.streets-design-callout p {
+    margin-top: 0.35rem;
+    max-width: 76ch;
+}
+
+.streets-kinzie-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+}
+
+.streets-kinzie-stat {
+    padding: 0.85rem;
+    border: 1px solid var(--streets-border);
+    border-radius: 8px;
+    background: var(--bg);
+}
+
+.streets-kinzie-stat-label {
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.streets-kinzie-stat-value {
+    margin-top: 0.25rem;
+    color: var(--fg);
+    font-size: 1.25rem;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.streets-kinzie-stat-detail {
+    margin-top: 0.35rem;
+    color: var(--muted);
+    font-size: 0.78rem;
+    line-height: 1.35;
+}
+
+.streets-kinzie-map-card {
+    margin-bottom: 1.1rem;
+}
+
+.streets-kinzie-map-legend {
+    padding-top: 0.35rem;
+    padding-bottom: 0.85rem;
+}
+
+#streets-kinzie-map {
+    width: 100%;
+    height: min(58vh, 520px);
+    min-height: 390px;
+}
+
+.streets-line-swatch {
+    width: 1.45rem;
+    height: 0.35rem;
+    flex: 0 0 auto;
+    border-radius: 999px;
+}
+
+.streets-line-swatch-protected {
+    background: var(--kinzie-protected);
+}
+
+.streets-line-swatch-unprotected {
+    background: var(--kinzie-unprotected);
+}
+
+.streets-kinzie-point-swatch {
+    background: #334155;
+}
+
+.streets-kinzie-photo-grid,
+.streets-design-grid {
+    display: grid;
+    gap: clamp(1rem, 1.8vw, 1.35rem);
+}
+
+.streets-kinzie-photo-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-bottom: 1.2rem;
+}
+
+.streets-photo-card,
+.streets-design-card,
+.streets-design-source-panel {
+    overflow: hidden;
+    border: 1px solid var(--streets-border);
+    border-radius: 8px;
+    background: var(--streets-surface);
+    box-shadow: var(--streets-shadow);
+}
+
+.streets-photo-card {
+    margin: 0;
+}
+
+.streets-photo-card img,
+.streets-design-card img {
+    display: block;
+    width: 100%;
+    object-fit: cover;
+    background: var(--streets-surface-strong);
+}
+
+.streets-photo-card img {
+    aspect-ratio: 16 / 9;
+}
+
+.streets-photo-card figcaption {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.95rem 1rem 1.05rem;
+}
+
+.streets-photo-card figcaption strong {
+    color: var(--fg);
+    font-size: 0.98rem;
+}
+
+.streets-photo-card figcaption em {
+    font-size: 0.78rem;
+    font-style: normal;
+}
+
+.streets-design-subhead {
+    margin: 1.55rem 0 0.85rem;
+}
+
+.streets-design-subhead h3 {
+    max-width: 42ch;
+    color: var(--fg);
+    font-size: clamp(1.15rem, 1.65vw, 1.45rem);
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.streets-design-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.streets-design-card {
+    display: grid;
+    grid-template-rows: auto 1fr;
+}
+
+.streets-design-card img {
+    aspect-ratio: 16 / 8.7;
+}
+
+.streets-design-card > div {
+    display: grid;
+    gap: 0.65rem;
+    padding: 1rem 1.05rem 1.1rem;
+}
+
+.streets-design-card h3 {
+    color: var(--fg);
+    font-size: 1.05rem;
+    font-weight: 750;
+    line-height: 1.25;
+}
+
+.streets-design-card a,
+.streets-design-links a {
+    color: var(--fg);
+    font-size: 0.86rem;
+    font-weight: 750;
+}
+
+.streets-design-focus {
+    padding: 0.65rem 0.75rem;
+    border: 1px solid var(--streets-border);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--streets-orange) 9%, var(--bg));
+    color: var(--fg) !important;
+    font-weight: 650;
+}
+
+.streets-design-source-panel {
+    margin-top: 1.2rem;
+    padding: 1.1rem 1.25rem;
+}
+
+.streets-design-source-panel p {
+    margin-top: 0.35rem;
+    max-width: 82ch;
+}
+
+.streets-design-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    margin-top: 0.9rem;
+}
+
+.streets-design-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.1rem;
+    padding: 0.25rem 0.65rem;
+    border: 1px solid var(--streets-border);
+    border-radius: 999px;
+    background: var(--bg);
+    text-decoration: none;
+}
+
+.streets-design-links a:hover,
+.streets-design-links a:focus-visible {
+    background: var(--streets-surface-strong);
+}
+
+.streets-footer h3 {
+    color: var(--fg);
+    font-size: 1rem;
+}
+
+.streets-source-download {
+    margin: 0.65rem 0 0;
+}
+
+.streets-source-download a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.4rem;
+    padding: 0 0.85rem;
+    border: 1px solid var(--streets-border);
+    border-radius: 8px;
+    background: var(--streets-surface);
+    color: var(--fg);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.streets-source-download a:hover,
+.streets-source-download a:focus-visible {
+    background: var(--streets-surface-strong);
+}
+
+.streets-footer h4 {
+    margin: 1.25rem 0 0.65rem;
+    color: var(--fg);
+    font-size: 0.95rem;
+}
+
+.streets-footer ul {
+    max-width: 78ch;
+    margin-top: 0.65rem;
+    list-style: disc;
+    padding-left: 1.2rem;
+}
+
+.streets-footer li {
+    margin-bottom: 0.45rem;
+}
+
+.streets-footer code {
+    padding: 0.08rem 0.28rem;
+    border: 1px solid var(--streets-border);
+    border-radius: 4px;
+    background: var(--streets-surface-strong);
+    color: var(--fg);
+    font-size: 0.88em;
+}
+
+.streets-fine-schedule {
+    max-width: 980px;
+}
+
+.streets-fine-schedule-wrap {
+    padding: 0;
+    border: 1px solid var(--streets-border);
+    border-radius: 8px;
+    background: var(--streets-surface);
+    box-shadow: var(--streets-shadow);
+}
+
+.streets-chart-tooltip {
+    position: fixed;
+    z-index: 20;
+    top: 0;
+    left: 0;
+    max-width: min(20rem, calc(100vw - 2rem));
+    padding: 0.65rem 0.75rem;
+    border: 1px solid var(--streets-border);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--bg) 95%, var(--fg));
+    color: var(--fg);
+    box-shadow: 0 1rem 2rem rgba(15, 23, 42, 0.18);
+    font-size: 0.82rem;
+    line-height: 1.35;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-999px, -999px);
+}
+
+.streets-chart-tooltip strong {
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.streets-chart-tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1.2rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.streets-popup {
+    min-width: 220px;
+}
+
+.streets-popup-title {
+    color: #111827;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+.streets-popup-detail {
+    margin-top: 0.35rem;
+    color: #4b5563;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.streets-popup-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.55rem;
+}
+
+.streets-popup-pill {
+    display: inline-flex;
+    padding: 0.22rem 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    background: #fff;
+    color: #111827;
+    font-size: 0.76rem;
+    font-weight: 650;
+}
+
+.streets-kinzie-marker {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.65rem;
+    padding: 0.2rem 0.48rem;
+    border: 2px solid #fff;
+    border-radius: 999px;
+    background: var(--marker-color, #334155);
+    color: #fff;
+    box-shadow: 0 0.35rem 0.9rem rgba(15, 23, 42, 0.26);
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+@media (prefers-color-scheme: dark) {
+    .streets-chart-tooltip {
+        box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.45);
+    }
+}
+
+@media (max-width: 1050px) {
+    .streets-cards,
+    .streets-context-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .streets-map-layout,
+    .streets-time-layout,
+    .streets-mix-layout,
+    .streets-corridor-layout,
+    .streets-design-callout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .streets-side-panel {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 720px) {
+    .streets-cards,
+    .streets-context-grid,
+    .streets-side-panel,
+    .streets-kinzie-photo-grid,
+    .streets-design-grid,
+    .streets-kinzie-stats {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    #streets-map {
+        height: 74vh;
+        min-height: 460px;
+    }
+
+    #streets-kinzie-map {
+        height: 64vh;
+        min-height: 360px;
+    }
+
+    .streets-card-head {
+        padding: 1.05rem 1rem 0.45rem;
+    }
+
+    .streets-svg-wrap {
+        padding: 0.55rem 0.85rem 0.95rem;
+    }
+
+    .streets-chart-legend {
+        padding: 0 1rem 0.95rem;
+        font-size: 0.86rem;
+    }
+
+    .streets-grouped-bar-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.35rem;
+    }
+
+    .streets-grouped-bar-line {
+        grid-template-columns: minmax(4.6rem, auto) minmax(0, 1fr) minmax(5.8rem, auto);
+        gap: 0.45rem;
+    }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "chicago-smart-streets-pilot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Open, reproducible analysis of Chicago Smart Streets pilot FOIA data.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build:data": "node packages/data/scripts/build-smart-streets-pilot.js",
+    "dev": "npm --workspace apps/web run dev",
+    "build": "npm run build:data && npm --workspace apps/web run build",
+    "preview": "npm --workspace apps/web run preview",
+    "check:private-refs": "! rg -n \"michaelmclean\\.me|mclean-website|source-assets-proxy|Railway Bucket|smart-streets-source-files|/Users/|misterclean|frontend-production\" . --glob '!package.json' --glob '!node_modules/**' --glob '!apps/web/dist/**'"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5"
+  }
+}

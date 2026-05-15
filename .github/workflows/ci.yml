@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and reproducibility check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check for private repository references
+        run: npm run check:private-refs
+
+      - name: Build data and site
+        run: npm run build
+
+      - name: Verify generated data is reproducible
+        run: |
+          git diff --exit-code -- \
+            apps/web/public/data/chicago-smart-streets-pilot.json \
+            apps/web/public/data/chicago-smart-streets-points.geojson \
+            apps/web/public/data/chicago-smart-streets-zones.geojson

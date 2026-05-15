@@ -1,0 +1,603 @@
+/* Chicago Early Voting Dashboard 2026 */
+
+.ev-page {
+    padding: 0;
+    min-height: 100vh;
+    --ev-map-surface: #f7f3eb;
+    --ev-map-surface-hover: #efe8dc;
+    --ev-map-border: rgba(117, 103, 85, 0.32);
+    --ev-map-shadow: 0 18px 44px rgba(28, 25, 23, 0.18);
+    --ev-map-control-surface: rgba(250, 247, 240, 0.94);
+    --ev-map-control-surface-hover: rgba(241, 234, 223, 0.98);
+    --ev-map-control-border: rgba(117, 103, 85, 0.22);
+    --ev-map-control-shadow: 0 14px 28px rgba(28, 25, 23, 0.16);
+    --ev-map-control-icon-filter: none;
+}
+
+.ev-header {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 0;
+}
+
+.ev-back {
+    font-size: 0.9rem;
+    color: var(--muted);
+    text-decoration: none;
+}
+
+.ev-back:hover {
+    color: var(--fg);
+}
+
+.ev-header h1 {
+    margin-top: 0.75rem;
+    font-size: 1.8rem;
+}
+
+.ev-subtitle {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-top: 0.25rem;
+}
+
+.ev-status-banner {
+    max-width: 1100px;
+    margin: 1rem auto 0;
+    padding: 0.75rem 1.5rem;
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: 6px;
+    color: #92400e;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+@media (prefers-color-scheme: dark) {
+    .ev-page {
+        --ev-map-surface: rgba(24, 24, 24, 0.96);
+        --ev-map-surface-hover: rgba(38, 38, 38, 0.98);
+        --ev-map-border: rgba(255, 255, 255, 0.12);
+        --ev-map-shadow: 0 20px 48px rgba(0, 0, 0, 0.5);
+        --ev-map-control-surface: rgba(23, 23, 23, 0.92);
+        --ev-map-control-surface-hover: rgba(36, 36, 36, 0.96);
+        --ev-map-control-border: rgba(255, 255, 255, 0.12);
+        --ev-map-control-shadow: 0 18px 34px rgba(0, 0, 0, 0.45);
+        --ev-map-control-icon-filter: brightness(0) invert(1);
+    }
+
+    .ev-status-banner {
+        background: #451a03;
+        border-color: #b45309;
+        color: #fde68a;
+    }
+}
+
+.ev-main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1.5rem 3rem;
+}
+
+/* Section headings */
+.ev-section-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+/* Big number cards */
+.ev-cards {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.ev-card {
+    background: color-mix(in srgb, var(--fg) 4%, var(--bg));
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+}
+
+.ev-card-label {
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 500;
+}
+
+.ev-card-value {
+    font-size: 2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+    margin-top: 0.25rem;
+}
+
+.ev-card-detail {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 0.25rem;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Chart containers */
+.ev-chart-wrap {
+    margin-top: 1.5rem;
+    background: color-mix(in srgb, var(--fg) 4%, var(--bg));
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+}
+
+.ev-chart-wrap h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.ev-chart-canvas {
+    width: 100%;
+    max-height: 320px;
+}
+
+/* Maps row */
+.ev-maps-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+/* Map */
+.ev-map-wrap {
+    background: color-mix(in srgb, var(--fg) 4%, var(--bg));
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.ev-map-wrap h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 1.25rem 1.25rem 0.75rem;
+}
+
+#ev-map,
+#ev-turnout-map,
+#vbm-map,
+#vbm-turnout-map,
+#combined-map,
+#combined-turnout-map {
+    width: 100%;
+    height: 500px;
+}
+
+/* Map section titles */
+.ev-map-section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin-top: 2rem;
+    margin-bottom: 0.25rem;
+}
+
+.ev-maps-row + .ev-map-section-title {
+    margin-top: 2.5rem;
+}
+
+.ev-legend {
+    padding: 0.75rem 1.25rem 0.5rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+    max-width: 360px;
+}
+
+.ev-legend-bar {
+    height: 12px;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+}
+
+.ev-legend-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.25rem;
+}
+
+/* Site legend */
+.ev-site-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0 1.25rem 1rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+
+.ev-site-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+}
+
+/* Scope MapLibre chrome to election dashboards so it wins over vendor CSS. */
+body.ev-page .maplibregl-popup {
+    max-width: min(92vw, 340px);
+}
+
+body.ev-page .maplibregl-popup-content {
+    background: var(--ev-map-surface);
+    color: var(--fg);
+    border: 1px solid var(--ev-map-border);
+    border-radius: 14px;
+    padding: 0.8rem 0.9rem;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    box-shadow: var(--ev-map-shadow);
+}
+
+body.ev-page .maplibregl-popup-close-button {
+    color: var(--muted);
+    font-size: 1.1rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 999px;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+body.ev-page .maplibregl-popup-close-button:hover {
+    background: color-mix(in srgb, var(--fg) 8%, var(--ev-map-surface-hover));
+    color: var(--fg);
+}
+
+body.ev-page .maplibregl-popup-anchor-top .maplibregl-popup-tip {
+    border-bottom-color: var(--ev-map-surface);
+}
+
+body.ev-page .maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+    border-top-color: var(--ev-map-surface);
+}
+
+body.ev-page .maplibregl-popup-anchor-left .maplibregl-popup-tip {
+    border-right-color: var(--ev-map-surface);
+}
+
+body.ev-page .maplibregl-popup-anchor-right .maplibregl-popup-tip {
+    border-left-color: var(--ev-map-surface);
+}
+
+body.ev-page .maplibregl-ctrl-group {
+    background: var(--ev-map-control-surface);
+    border: 1px solid var(--ev-map-control-border);
+    border-radius: 14px;
+    box-shadow: var(--ev-map-control-shadow);
+    overflow: hidden;
+}
+
+body.ev-page .maplibregl-ctrl-group button {
+    background: transparent;
+}
+
+body.ev-page .maplibregl-ctrl-group button + button {
+    border-top: 1px solid var(--ev-map-control-border);
+}
+
+body.ev-page .maplibregl-ctrl-group button:hover,
+body.ev-page .maplibregl-ctrl-group button:focus-visible {
+    background: var(--ev-map-control-surface-hover);
+}
+
+body.ev-page .maplibregl-ctrl-group .maplibregl-ctrl-icon {
+    filter: var(--ev-map-control-icon-filter);
+}
+
+body.ev-page .maplibregl-ctrl-attrib,
+body.ev-page .maplibregl-ctrl-attrib.maplibregl-compact,
+body.ev-page .maplibregl-ctrl-bottom-right > .maplibregl-ctrl,
+body.ev-page .maplibregl-ctrl-bottom-left > .maplibregl-ctrl {
+    background: color-mix(in srgb, var(--ev-map-control-surface) 94%, transparent);
+    color: var(--muted);
+    border: 1px solid var(--ev-map-control-border);
+    border-radius: 10px;
+    box-shadow: var(--ev-map-control-shadow);
+    backdrop-filter: blur(10px);
+}
+
+body.ev-page .maplibregl-ctrl-attrib a {
+    color: inherit;
+}
+
+/* Benchmark comparison cards */
+.ev-benchmark-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.ev-bench-card {
+    background: color-mix(in srgb, var(--fg) 4%, var(--bg));
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+}
+
+.ev-bench-year {
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 500;
+}
+
+.ev-bench-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+    margin-top: 0.25rem;
+}
+
+.ev-bench-breakdown {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 0.25rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.ev-bench-change {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-top: 0.5rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.ev-bench-change.up {
+    color: #16a34a;
+}
+
+@media (prefers-color-scheme: dark) {
+    .ev-bench-change.up {
+        color: #4ade80;
+    }
+}
+
+/* Caption */
+.ev-caption {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin: -0.5rem 0 0.75rem;
+}
+
+.ev-map-wrap .ev-caption {
+    padding: 0 1.25rem;
+    margin: -0.25rem 0 0;
+}
+
+/* Ward table */
+.ev-table-wrap {
+    overflow-x: auto;
+    margin-top: 1.5rem;
+    -webkit-overflow-scrolling: touch;
+}
+
+.ev-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.ev-table thead th {
+    background: var(--fg);
+    color: var(--bg);
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+}
+
+.ev-table thead th:hover {
+    opacity: 0.85;
+}
+
+.ev-table thead th.text-right,
+.ev-table tbody td.text-right {
+    text-align: right;
+}
+
+.ev-table tbody td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.ev-table tbody tr:nth-child(even) {
+    background: color-mix(in srgb, var(--fg) 4%, var(--bg));
+}
+
+.ev-table tbody tr:hover {
+    background: color-mix(in srgb, var(--fg) 8%, var(--bg));
+}
+
+.ev-total-row {
+    border-bottom: 2px solid var(--fg);
+}
+
+.ev-sort-arrow {
+    font-size: 0.7rem;
+    margin-left: 0.3rem;
+    opacity: 0.5;
+}
+
+.ev-sort-arrow.active {
+    opacity: 1;
+}
+
+/* Footer */
+.ev-footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border, #e5e5e5);
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+.ev-footer h3 {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.ev-footer ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.ev-footer li {
+    margin-bottom: 0.3rem;
+}
+
+.ev-footer a {
+    color: var(--muted);
+}
+
+/* District controls */
+.ev-district-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+.ev-district-select {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--fg);
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.ev-party-toggle {
+    display: flex;
+    gap: 0;
+}
+
+.ev-party-btn {
+    padding: 0.45rem 0.9rem;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--muted);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.ev-party-btn:first-child {
+    border-radius: 6px 0 0 6px;
+}
+
+.ev-party-btn:last-child {
+    border-radius: 0 6px 6px 0;
+}
+
+.ev-party-btn:not(:first-child) {
+    border-left: none;
+}
+
+.ev-party-btn.active {
+    background: #0d9488;
+    color: #fff;
+    border-color: #0d9488;
+}
+
+.ev-party-btn.active + .ev-party-btn {
+    border-left-color: #0d9488;
+}
+
+#district-choropleth-map {
+    width: 100%;
+    height: 500px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .ev-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .ev-benchmark-cards {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .ev-maps-row {
+        grid-template-columns: 1fr;
+    }
+
+    #ev-map,
+    #ev-turnout-map,
+    #vbm-map,
+    #vbm-turnout-map,
+    #combined-map,
+    #combined-turnout-map,
+    #district-choropleth-map {
+        height: 400px;
+    }
+}
+
+@media (max-width: 480px) {
+    .ev-header {
+        padding-top: 1.5rem;
+    }
+
+    .ev-header h1 {
+        font-size: 1.4rem;
+    }
+
+    .ev-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .ev-benchmark-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .ev-card-value {
+        font-size: 1.6rem;
+    }
+
+    #ev-map,
+    #ev-turnout-map,
+    #vbm-map,
+    #vbm-turnout-map,
+    #combined-map,
+    #combined-turnout-map,
+    #district-choropleth-map {
+        height: 300px;
+    }
+
+    .ev-table {
+        font-size: 0.8rem;
+    }
+
+    .ev-table thead th,
+    .ev-table tbody td {
+        padding: 0.4rem 0.5rem;
+    }
+
+    .ev-chart-wrap {
+        padding: 1rem;
+    }
+}

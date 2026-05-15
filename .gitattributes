@@ -1,0 +1,8 @@
+*.jpg binary
+*.zip binary
+
+# Large source and generated data files are intentionally committed for
+# reproducibility, but line-by-line diffs are not useful in pull requests.
+*.csv -diff
+apps/web/public/data/*.json -diff
+apps/web/public/data/*.geojson -diff
