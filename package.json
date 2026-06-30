@@ -15,6 +15,6 @@
     "check:private-refs": "! rg -n \"michaelmclean\\.me|mclean-website|source-assets-proxy|Railway Bucket|smart-streets-source-files|/Users/|misterclean|frontend-production\" . --glob '!package.json' --glob '!node_modules/**' --glob '!apps/web/dist/**'"
   },
   "devDependencies": {
-    "vite": "^6.3.5"
+    "vite": "^6.4.3"
   }
 }
