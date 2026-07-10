@@ -7,7 +7,7 @@ const repoRoot = path.resolve(__dirname, "../../..");
 const dataPackageRoot = path.resolve(__dirname, "..");
 const webDataRoot = path.join(repoRoot, "apps", "web", "public", "data");
 const sourceFilenames = {
-    violations: "smartstreetsapril26.csv",
+    violations: "smartstreetsjune26.csv",
     locations: "smartstreetslocdecoder.csv",
     zones: "smartstreetszones.geojson",
 };
@@ -1127,7 +1127,7 @@ async function main() {
         generatedAt,
         sources,
         methodology: {
-            dataRange: "Violations are included when they appear in the FOIA extract dated through April 25, 2026.",
+            dataRange: "Violations are included when they appear in the FOIA extract dated through June 27, 2026.",
             fineAmounts: "Listed fines sum the FOIA Fine Level 1 values. Fine-bearing violations are records where Fine Level 1 is greater than zero; listed fines do not measure payment, collection, or adjudication outcomes.",
             geocoding: "Ticket addresses and zone polygons were geocoded by Alex Cannon. The map aggregates points by location and infraction type for browser performance.",
             timestamps: "Issued Date values have no timezone offset in the source CSV. The build treats them as Chicago local wall time and does not shift hours or weekdays.",
