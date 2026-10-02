@@ -58,7 +58,8 @@ The raw source inputs are committed in `packages/data/source/`:
 - `FOIA_Cannon_A52020_20260915.xlsx` and its normalized CSV
 - `_P197426_Illegal_Parking.xlsx` and its normalized CSV
 - `smartstreetslocdecoder-frontage.csv` and `illegal-parking-locations.csv`
-- `chicago-street-centerlines.json.gz` and `census-geocoding-cache.json`
+- `chicago-street-centerlines.json.gz`, `census-geocoding-cache.json`, and `county-geocoding-fallback.json`
+- `county-fallback-evidence.zip` with scoped API responses and review outputs
 - `foia-reconciliation.json`, `geocoding-audit.json`, and review queues
 - `smartstreetszones.geojson`
 
@@ -84,7 +85,7 @@ SMART_STREETS_WARDS_GEOJSON=/path/to/chicago-wards.geojson npm run build:data
 
 The default `generatedAt` timestamp is pinned to this October 2, 2026 refresh so repeated builds are stable. Set `SMART_STREETS_GENERATED_AT` if you intentionally refresh the source snapshot.
 
-Rebuild the frontage lookup with `npm run geocode:data`. This uses the pinned city geometry and Census cache without network calls or API keys. `npm run test:data` verifies matching edge cases, every point's frontage segment, and aggregate totals. See the source notes for intentional reference-data refresh options.
+Rebuild the frontage lookup with `npm run geocode:data`. This uses pinned city geometry, Census responses, and an accepted county fallback cache without network calls or API keys. County data is considered only after city and Census methods fail; it never replaces a successful first-method match. See [county fallback findings](COUNTY-GEOCODING.md). `npm run test:data` verifies matching edge cases, every point's frontage segment, and aggregate totals. See the source notes for intentional reference-data refresh options.
 
 To normalize a new delivery, install `openpyxl` in a local Python environment, then use:
 
@@ -110,7 +111,7 @@ The static site is emitted to `apps/web/dist/`.
 
 - Violations are from a Chicago Department of Finance FOIA export obtained by Alex Cannon.
 - Listed fines sum the FOIA `Fine Level 1` values; they do not measure payment, collection, or adjudication outcomes.
-- Ticket points are estimated on their named frontage streets using city address ranges, with validated cached Census matches for gaps. Unresolved records stay in totals and charts. Zone polygons were supplied by Alex Cannon.
+- Ticket points are estimated on their named frontage streets using city address ranges, with validated cached Census matches for gaps and county address/parcel frontage projections only for remaining failures. Unresolved records stay in totals and charts. Zone polygons were supplied by Alex Cannon.
 - Conventional tickets are citywide and have masked block locations; they remain separate from Smart Streets totals. Their reporting period and broader bus/taxi/carriage category prevent equivalent-exposure or causal comparisons.
 - Issued dates are treated as Chicago local wall time because the source CSV does not include timezone offsets.
 - The analysis is provided as-is for informational and reproducibility purposes.

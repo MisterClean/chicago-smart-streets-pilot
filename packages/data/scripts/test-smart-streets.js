@@ -3,7 +3,7 @@ const test = require("node:test");
 const fs = require("node:fs");
 const path = require("node:path");
 const { parseCsv } = require("./build-smart-streets-pilot.js");
-const { buildStreetIndex, matchAddress, censusFallback, addressSidePoint, project, distance } = require("./geocode-smart-streets.js");
+const { buildStreetIndex, matchAddress, censusFallback, countyFallback, applyFallbacks, addressSidePoint, project, distance } = require("./geocode-smart-streets.js");
 
 function street(overrides = {}) {
     return { objectid: "1", pre_dir: "W", street_nam: "TEST", street_typ: "ST", suf_dir: "", tiered: "N", f_zlev: "0", t_zlev: "0",
@@ -54,6 +54,38 @@ test("Census fallback must match the number, direction, street and nearby block"
 });
 
 const dataRoot = process.env.SMART_STREETS_OUTPUT_DIR || path.resolve(__dirname, "../../../apps/web/public/data");
+test("county fallback cannot override a city or Census success and rejects review flags", () => {
+    const index = buildStreetIndex([street()]);
+    const cached = { address: "150 W TEST ST", source: "county_address_point", status: "accepted", current_method: "unresolved", warnings: "", pin10: "1234567890",
+        longitude: "-87.6405", latitude: "41.88", raw_longitude: "-87.6405", raw_latitude: "41.8801", snap_distance_m: "11.1", segment_id: "1", county_candidate_count: "1" };
+    assert.equal(countyFallback(cached.address, index, cached).method, "county_address_point_projection");
+    assert.equal(applyFallbacks(cached.address, index, null, cached).method, "street_interpolation");
+    const gapIndex = buildStreetIndex([street({ l_f_add: "101", l_t_add: "149", r_f_add: "100", r_t_add: "148" })]);
+    const census = { match: "Match", matchedAddress: "150 W TEST ST, CHICAGO, IL", coordinates: "-87.6406,41.8801", tigerLineId: "123" };
+    assert.equal(applyFallbacks(cached.address, gapIndex, census, cached).method, "census_street_projection");
+    assert.equal(applyFallbacks(cached.address, gapIndex, null, cached).method, "county_address_point_projection");
+    assert.equal(countyFallback(cached.address, index, { ...cached, warnings: "other_street_frontage_review" }), null);
+    assert.equal(countyFallback(cached.address, index, { ...cached, longitude: "-87.7" }), null);
+    assert.equal(countyFallback("1XX W TEST ST", index, cached), null);
+});
+
+test("all successful first-method locations, including 410 S Morgan, remain unchanged", () => {
+    const directory = process.env.SMART_STREETS_SOURCE_DIR;
+    if (!directory) return;
+    const baseline = parseCsv(fs.readFileSync(path.join(directory, "previous/smartstreetslocdecoder-frontage-20261002.csv"), "utf8"));
+    const current = new Map(parseCsv(fs.readFileSync(path.join(directory, "smartstreetslocdecoder-frontage.csv"), "utf8")).map((row) => [row.orig_location, row]));
+    const county = JSON.parse(fs.readFileSync(path.join(directory, "county-geocoding-fallback.json"), "utf8"));
+    for (const old of baseline.filter((row) => row.method !== "unresolved")) {
+        for (const [field, value] of Object.entries(old)) assert.equal(current.get(old.orig_location)[field], value, `${old.orig_location}: ${field}`);
+        assert.equal(county.results[old.orig_location], undefined);
+    }
+    const morgan = current.get("410 S MORGAN ST");
+    assert.equal(morgan.method, "street_interpolation");
+    assert.ok(Number(morgan.latitude) > 41.876);
+    const additions = baseline.filter((row) => row.method === "unresolved" && current.get(row.orig_location).method !== "unresolved");
+    assert.equal(additions.length, 69);
+    assert.equal(additions.reduce((sum, row) => sum + Number(row.records), 0), 990);
+});
 test("published summaries account for every record, including unmapped tickets", () => {
     const data = JSON.parse(fs.readFileSync(path.join(dataRoot, "chicago-smart-streets-pilot.json"), "utf8"));
     const points = JSON.parse(fs.readFileSync(path.join(dataRoot, "chicago-smart-streets-points.geojson"), "utf8"));

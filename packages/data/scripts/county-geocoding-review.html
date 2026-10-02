@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>County fallback — address review</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.5.0/dist/maplibre-gl.css">
+  <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.5.0/dist/maplibre-gl.js"></script>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#faf9f6;color:#202522;font:16px/1.5 system-ui,sans-serif}main{display:grid;grid-template-columns:380px 1fr;height:100vh}aside{padding:26px;overflow:auto;border-right:1px solid #d8dcd6}h1{font-size:25px;line-height:1.2;margin:0 0 12px}p{margin:0 0 18px;color:#525b55}label{display:block;font-size:14px;font-weight:600;margin-top:18px}input,select,button{width:100%;font:inherit;padding:10px;border:1px solid #a9b3aa;border-radius:5px;background:white;color:inherit}button{margin-top:12px;cursor:pointer}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #477eca;outline-offset:2px}#map{height:100%;min-height:400px}dl{font-size:14px;margin:20px 0}dt{color:#5c665e;margin-top:10px}dd{margin:0;overflow-wrap:anywhere}.legend{font-size:14px;list-style:none;padding:0}.legend li{margin:8px 0}.swatch{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;border:1px solid #fff;outline:1px solid #aaa}.status{font-weight:700}#error{color:#a4291a}@media(max-width:760px){main{display:flex;flex-direction:column;height:auto}aside{border-right:0}#map{height:65vh}}.maplibregl-popup-content{font:14px/1.5 system-ui;padding:12px}
+  </style>
+  <style>.map-wrap{position:relative;height:100%}.map-wrap .legend{position:absolute;left:16px;top:0;background:white;padding:10px 15px;border-radius:5px;box-shadow:0 1px 7px #0003;pointer-events:none}@media(max-width:760px){.map-wrap{height:65vh}#map{height:100%}}</style>
+</head>
+<body>
+<main>
+  <aside>
+    <h1>County fallback review</h1>
+    <p>County data applies only after city and Census methods fail. Accepted fallback points appear in the branch dashboard; flagged candidates remain unmapped.</p>
+    <label for="search">Find an address</label><input id="search" type="search" placeholder="e.g. 500 S Dearborn" autocomplete="off">
+    <label for="filter">Review group</label><select id="filter"><option value="all">All snapped candidates</option><option value="recovered">Previously unmapped</option><option value="moved">Moved more than 100 m</option><option value="review">Flagged for review</option><option value="accepted">Passed automated checks</option></select>
+    <label for="addresses">Address · ticket records</label><select id="addresses" aria-label="Select an address"></select>
+    <button id="next" type="button">Next address</button>
+    <div id="details" aria-live="polite"></div><p id="error" role="alert"></p>
+    <p style="font-size:13px">Points estimate a position along the frontage street. They do not identify the exact curb or vehicle position. Masked block addresses are outside this trial. Automated checks are not a ground-truth accuracy measurement.</p>
+    <a href="county-geocoding-comparison.csv" download>Download the complete comparison CSV</a>
+  </aside>
+  <div class="map-wrap"><div id="map" aria-label="Map of selected address, parcel and geocoding candidates"></div><ul class="legend"><li><span class="swatch" style="background:#e77918"></span>County starting point</li><li><span class="swatch" style="background:#16824b"></span>County snapped to named street</li><li><span class="swatch" style="background:#8a45be"></span>Current dashboard point</li><li><span class="swatch" style="background:#6075ac"></span>County parcel footprint</li></ul></div>
+</main>
+<script>
+  const map=new maplibregl.Map({container:'map',center:[-87.631,41.889],zoom:15,style:{version:8,sources:{osm:{type:'raster',tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],tileSize:256,attribution:'© OpenStreetMap contributors'}},layers:[{id:'base',type:'raster',source:'osm'}]}});
+  map.addControl(new maplibregl.NavigationControl());
+  let data=[],shown=[];
+  const el=id=>document.getElementById(id),point=(coordinates,kind)=>({type:'Feature',properties:{kind},geometry:{type:'Point',coordinates}});
+  function textLine(list,label,value){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=String(value);list.append(dt,dd)}
+  function show(){
+    const item=shown[Number(el('addresses').value)];if(!item){el('details').textContent='No candidates in this selection.';map.getSource('selected')?.setData({type:'FeatureCollection',features:[]});return}
+    const p=item.properties,features=[point(item.raw,'County starting point'),point(item.snapped,'County street snap'),{type:'Feature',properties:{kind:'street'},geometry:item.street},{type:'Feature',properties:{kind:'connector'},geometry:{type:'LineString',coordinates:[item.raw,item.snapped]}}];
+    if(item.current)features.push(point(item.current,'Current dashboard point'));
+    if(item.parcel)features.push({type:'Feature',properties:{kind:'parcel'},geometry:item.parcel});
+    map.getSource('selected').setData({type:'FeatureCollection',features});
+    const bounds=new maplibregl.LngLatBounds().extend(item.raw).extend(item.snapped);if(item.current)bounds.extend(item.current);map.fitBounds(bounds,{padding:90,maxZoom:18,duration:0});
+    el('details').replaceChildren();const heading=document.createElement('h2');heading.style.fontSize='19px';heading.textContent=p.address;el('details').append(heading);const dl=document.createElement('dl');el('details').append(dl);
+    const flagged=p.warnings.includes('large_change_from_current')||p.warnings.includes('other_street_frontage_review');textLine(dl,'Result',p.status==='accepted'?(flagged?'Spatial checks passed; manual review flagged':'Passed automated checks'):'Review required');textLine(dl,'Source',p.source.replaceAll('_',' '));textLine(dl,'Starting point → street',p.snap_distance_m+' m');textLine(dl,'Change from current point',p.movement_m===''?'Previously unmapped':p.movement_m+' m');textLine(dl,'Physical parcel PIN10',p.pin10||'Unavailable');textLine(dl,'City address range',p.range_match?'Matches':'Gap or mismatch — see flags');textLine(dl,'Review flags',p.reason.replaceAll('|',', ').replaceAll('_',' ')||'None');textLine(dl,'Source notes',p.warnings.replaceAll('|',', ').replaceAll('_',' ')||'None');if(p.other_street)textLine(dl,'Possible other frontage',p.other_street+' · '+p.other_street_parcel_distance_m+' m from parcel');textLine(dl,'Ticket records',Number(p.records).toLocaleString());
+    history.replaceState(null,'','#'+encodeURIComponent(p.address));
+  }
+  function filter(){const query=el('search').value.toUpperCase().trim(),group=el('filter').value;shown=data.filter(item=>item.properties.address.toUpperCase().includes(query)&&(group==='all'||(group==='recovered'&&item.properties.current_method==='unresolved')||(group==='moved'&&Number(item.properties.movement_m)>100)||(group==='review'&&(item.properties.status==='review'||item.properties.warnings.includes('large_change_from_current')||item.properties.warnings.includes('other_street_frontage_review')))||group===item.properties.status));el('addresses').replaceChildren(...shown.map((item,i)=>{const option=document.createElement('option');option.value=i;option.textContent=item.properties.address+' · '+Number(item.properties.records).toLocaleString();return option}));show()}
+  map.on('load',async()=>{
+    map.addSource('selected',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+    map.addLayer({id:'parcel-fill',type:'fill',source:'selected',filter:['==',['get','kind'],'parcel'],paint:{'fill-color':'#6075ac','fill-opacity':0.22}});
+    map.addLayer({id:'parcel-border',type:'line',source:'selected',filter:['==',['get','kind'],'parcel'],paint:{'line-color':'#6075ac','line-width':2}});
+    map.addLayer({id:'street',type:'line',source:'selected',filter:['==',['get','kind'],'street'],paint:{'line-color':'#16824b','line-width':3,'line-opacity':0.65}});
+    map.addLayer({id:'connector',type:'line',source:'selected',filter:['==',['get','kind'],'connector'],paint:{'line-color':'#e77918','line-width':2,'line-dasharray':[2,2]}});
+    map.addLayer({id:'points',type:'circle',source:'selected',filter:['==',['geometry-type'],'Point'],paint:{'circle-radius':['match',['get','kind'],'Current dashboard point',10,7],'circle-color':['match',['get','kind'],'County starting point','#e77918','County street snap','#16824b','#8a45be'],'circle-stroke-color':'white','circle-stroke-width':2}});
+    map.on('click','points',event=>{const f=event.features[0];new maplibregl.Popup().setLngLat(f.geometry.coordinates).setText(f.properties.kind).addTo(map)});
+    try{const response=await fetch('county-geocoding-map.json');if(!response.ok)throw Error('Comparison data could not be loaded');data=await response.json();const requested=decodeURIComponent(location.hash.slice(1));filter();const index=shown.findIndex(item=>item.properties.address===requested);if(index>=0){el('addresses').value=index;show()}}
+    catch(error){el('error').textContent=error.message}
+  });
+  el('search').addEventListener('input',filter);el('filter').addEventListener('change',filter);el('addresses').addEventListener('change',show);el('next').addEventListener('click',()=>{if(shown.length){el('addresses').value=(Number(el('addresses').value)+1)%shown.length;show()}});
+</script>
+</body>
+</html>

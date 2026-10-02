@@ -1,6 +1,10 @@
 {
   "streetSource": "https://data.cityofchicago.org/resource/pr57-gg9e.json",
   "streetSnapshotDate": "2026-10-02",
+  "countyPolicy": "unresolved_only",
+  "countyRetrievedOn": "2026-10-02",
+  "countyProjection": "EPSG:26971 (NAD83 / Illinois East, meters)",
+  "countyCachedLocations": 69,
   "censusBenchmark": "Public_AR_Current",
   "censusRetrievedOn": "2026-10-02",
   "censusCachedAddresses": 2854,
@@ -9,12 +13,12 @@
   "smartStreets": {
     "uniqueLocations": 15472,
     "records": 130788,
-    "matchedLocations": 14676,
-    "mappedRecords": 127027,
+    "matchedLocations": 14745,
+    "mappedRecords": 128017,
     "methods": {
       "unresolved": {
-        "locations": 796,
-        "records": 3761
+        "locations": 727,
+        "records": 2771
       },
       "street_interpolation": {
         "locations": 12605,
@@ -23,12 +27,20 @@
       "census_street_projection": {
         "locations": 2071,
         "records": 8399
+      },
+      "county_address_point_projection": {
+        "locations": 54,
+        "records": 905
+      },
+      "county_parcel_centroid_projection": {
+        "locations": 15,
+        "records": 85
       }
     },
     "reasons": {
       "no_address_range_match": {
-        "locations": 549,
-        "records": 2975
+        "locations": 480,
+        "records": 1985
       },
       "street_not_found": {
         "locations": 246,
@@ -39,7 +51,7 @@
         "records": 1
       }
     },
-    "movedOver100m": 741
+    "movedOver100m": 743
   },
   "illegalParking": {
     "uniqueLocations": 5538,

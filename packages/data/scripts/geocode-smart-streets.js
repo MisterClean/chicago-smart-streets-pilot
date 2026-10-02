@@ -179,6 +179,37 @@ function censusFallback(value, index, cached) {
     return { ...candidates[0], method: "census_street_projection", precision: "address_range", reason: "", candidateCount: candidates.length, tigerLineId: cached.tigerLineId };
 }
 
+function countyFallback(value, index, cached) {
+    const address = parseAddress(value);
+    if (!address || address.masked || address.tier || cached?.status !== "accepted" || cached.current_method !== "unresolved"
+        || cached.warnings.includes("other_street_frontage_review") || cached.warnings.includes("large_change_from_current")) return null;
+    const method = { county_address_point: "county_address_point_projection", county_parcel_centroid: "county_parcel_centroid_projection" }[cached.source];
+    if (!method || !/^\d{10}$/.test(cached.pin10)) return null;
+    const point = [Number(cached.longitude), Number(cached.latitude)];
+    const raw = [Number(cached.raw_longitude), Number(cached.raw_latitude)];
+    if ([...point, ...raw].some((n) => !Number.isFinite(n)) || [point, raw].some((p) => p[0] < -88 || p[0] > -87.5 || p[1] < 41.6 || p[1] > 42.1)
+        || cached.address !== value || !Number.isFinite(Number(cached.snap_distance_m)) || Number(cached.snap_distance_m) < 0) return null;
+    const road = (index.get(`${address.direction}|${address.name}`) || []).find((row) => String(row.objectid) === cached.segment_id);
+    const suffixAlias = address.direction === "N" && address.name === "DEARBORN" && address.suffix === "PKWY"
+        && words(road?.street_typ) === "ST" && address.number >= 1200 && address.number <= 1399;
+    if (!road || (address.suffix && address.suffix !== words(road.street_typ) && !suffixAlias)
+        || words(road.tiered) === "Y" || Number(road.f_zlev || 0) !== 0 || Number(road.t_zlev || 0) !== 0
+        || road.the_geom?.type !== "MultiLineString" || road.the_geom.coordinates.length !== 1) return null;
+    const line = road.the_geom.coordinates[0];
+    const limit = cached.source === "county_address_point" ? 50 : 100;
+    if (project(point, line).meters > 0.01 || Number(cached.snap_distance_m) > limit || project(raw, line).meters > limit + 1) return null;
+    return { point, rawPoint: raw, line, segmentId: String(road.objectid), street: `${road.pre_dir} ${road.street_nam} ${road.street_typ}`.trim(),
+        method, precision: cached.source === "county_address_point" ? "county_address" : "parcel", reason: "", candidateCount: Number(cached.county_candidate_count), county: cached };
+}
+
+function applyFallbacks(value, index, census, county) {
+    let match = matchAddress(value, index);
+    if (match.method === "unresolved") match = censusFallback(value, index, census) || match;
+    // County data may never replace either successful primary method.
+    if (match.method === "unresolved") match = countyFallback(value, index, county) || match;
+    return match;
+}
+
 async function loadCensusCache(directory, values, index) {
     const cachePath = path.join(directory, "census-geocoding-cache.json");
     const cache = fs.existsSync(cachePath) ? JSON.parse(fs.readFileSync(cachePath, "utf8")) : { benchmark: "Public_AR_Current", retrievedOn: "", results: {} };
@@ -243,6 +274,14 @@ async function main() {
     const index = buildStreetIndex(snapshot.rows);
     const smartRows = parseCsv(fs.readFileSync(path.join(directory, "FOIA_Cannon_A52020_20260915.csv"), "utf8"));
     const census = await loadCensusCache(directory, [...new Set(smartRows.map((row) => row.Location))].sort(), index);
+    const countyPath = path.join(directory, "county-geocoding-fallback.json");
+    const county = fs.existsSync(countyPath) ? JSON.parse(fs.readFileSync(countyPath, "utf8")) : { results: {} };
+    if (fs.existsSync(countyPath)) {
+        if (county.policy !== "unresolved_only") throw new Error("County fallback must use unresolved-only policy");
+        for (const [name, digest] of Object.entries(county.inputHashes)) {
+            if (crypto.createHash("sha256").update(fs.readFileSync(path.join(directory, name))).digest("hex") !== digest) throw new Error(`County fallback input changed: ${name}`);
+        }
+    }
     const legacyPath = path.join(directory, "previous", "smartstreetslocdecoder-2.csv");
     const legacy = fs.existsSync(legacyPath) ? new Map(parseCsv(fs.readFileSync(legacyPath, "utf8")).map((row) => [row.orig_location, [Number(row.longitude), Number(row.latitude)]])) : new Map();
     const reports = {};
@@ -251,16 +290,20 @@ async function main() {
         const counts = new Map();
         for (const row of records) counts.set(row.Location, (counts.get(row.Location) || 0) + 1);
         const locations = [...counts.keys()].sort().map((value) => {
-            let match = matchAddress(value, index);
-            if (match.method === "unresolved") match = censusFallback(value, index, census.results[value]) || match;
-            const wardPoint = addressSidePoint(match);
+            const match = applyFallbacks(value, index, census.results[value], key === "smartStreets" ? county.results[value] : null);
+            const wardPoint = match.rawPoint || addressSidePoint(match);
             const prior = legacy.get(value);
-            return { orig_location: value, address_clean: value ? `${words(value)}, Chicago, IL` : "", longitude: match.point?.[0] ?? "", latitude: match.point?.[1] ?? "",
+            const location = { orig_location: value, address_clean: value ? `${words(value)}, Chicago, IL` : "", longitude: match.point?.[0] ?? "", latitude: match.point?.[1] ?? "",
                 method: match.method, precision: match.precision || "unknown", reason: match.reason,
                 segment_id: match.segmentId || "", street: match.street || "", side: match.side || "", range_from: match.from ?? "", range_to: match.to ?? "",
                 ward_longitude: wardPoint?.[0] ?? "", ward_latitude: wardPoint?.[1] ?? "",
                 candidate_count: match.candidateCount || 0, census_tigerline_id: match.tigerLineId || "", records: counts.get(value),
                 previous_movement_m: prior && match.point ? Math.round(distance(prior, match.point)) : "" };
+            if (key === "smartStreets") Object.assign(location, { county_source: match.county?.source || "", county_pin10: match.county?.pin10 || "",
+                county_pin14: match.county?.county_pin14 || "", county_point_id: match.county?.county_objectids || "",
+                county_raw_longitude: match.rawPoint?.[0] ?? "", county_raw_latitude: match.rawPoint?.[1] ?? "", county_snap_distance_m: match.county?.snap_distance_m ?? "",
+                county_range_match: match.county?.range_match ?? "", county_warnings: match.county?.warnings || "" });
+            return location;
         });
         const output = key === "smartStreets" ? "smartstreetslocdecoder-frontage.csv" : "illegal-parking-locations.csv";
         fs.writeFileSync(path.join(directory, output), csv(locations, Object.keys(locations[0])));
@@ -279,11 +322,12 @@ async function main() {
         fs.writeFileSync(path.join(directory, `${key}-geocoding-review.csv`), csv(unresolved, Object.keys(locations[0])));
     }
     const audit = { streetSource: snapshot.source, streetSnapshotDate: snapshot.retrievedOn,
+        countyPolicy: "unresolved_only", countyRetrievedOn: county.retrievedOn || "", countyProjection: county.projection || "", countyCachedLocations: Object.keys(county.results).length,
         censusBenchmark: census.benchmark, censusRetrievedOn: census.retrievedOn, censusCachedAddresses: Object.keys(census.results).length,
         streetSnapshotSha256: crypto.createHash("sha256").update(fs.readFileSync(roadsPath)).digest("hex"), streetSegments: snapshot.rows.length, ...reports };
     fs.writeFileSync(path.join(directory, "geocoding-audit.json"), `${JSON.stringify(audit, null, 2)}\n`);
     console.log(JSON.stringify(audit, null, 2));
 }
 
-module.exports = { parseAddress, buildStreetIndex, matchAddress, censusFallback, addressSidePoint, distance, along, project, csv };
+module.exports = { parseAddress, buildStreetIndex, matchAddress, censusFallback, countyFallback, applyFallbacks, addressSidePoint, distance, along, project, csv };
 if (require.main === module) main().catch((error) => { console.error(error); process.exitCode = 1; });

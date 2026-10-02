@@ -12,10 +12,12 @@ SOURCE_FILES: tuple[str, ...] = (
     "_P197426_Illegal_Parking.xlsx", "_P197426_Illegal_Parking.csv",
     "smartstreetslocdecoder-frontage.csv", "illegal-parking-locations.csv",
     "chicago-street-centerlines.json.gz", "census-geocoding-cache.json",
+    "county-geocoding-fallback.json", "county-fallback-evidence.zip",
     "geocoding-audit.json", "foia-reconciliation.json",
     "smartStreets-geocoding-review.csv", "illegalParking-geocoding-review.csv",
     "smartstreetszones.geojson", "SOURCE-NOTES.md",
     "previous/FOIA_Cannon_A52020_20260702.csv", "previous/smartstreetslocdecoder-2.csv",
+    "previous/smartstreetslocdecoder-frontage-20261002.csv",
 )
 
 
