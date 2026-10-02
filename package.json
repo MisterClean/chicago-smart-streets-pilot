@@ -12,7 +12,9 @@
     "dev": "npm --workspace apps/web run dev",
     "build": "npm run build:data && npm --workspace apps/web run build",
     "preview": "npm --workspace apps/web run preview",
-    "check:private-refs": "! rg -n \"michaelmclean\\.me|mclean-website|source-assets-proxy|Railway Bucket|smart-streets-source-files|/Users/|misterclean|frontend-production\" . --glob '!package.json' --glob '!node_modules/**' --glob '!apps/web/dist/**'"
+    "check:private-refs": "! rg -n \"michaelmclean\\.me|mclean-website|source-assets-proxy|Railway Bucket|smart-streets-source-files|/Users/|misterclean|frontend-production\" . --glob '!package.json' --glob '!node_modules/**' --glob '!apps/web/dist/**'",
+    "geocode:data": "node packages/data/scripts/geocode-smart-streets.js",
+    "test:data": "SMART_STREETS_SOURCE_DIR=packages/data/source node --test packages/data/scripts/test-smart-streets.js"
   },
   "devDependencies": {
     "vite": "^6.3.5"

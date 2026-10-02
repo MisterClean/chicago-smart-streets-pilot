@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark">
-    <meta name="description" content="Interactive notebook analysis of Chicago Smart Streets pilot warnings, tickets, fines, corridors, and infraction geography through April 25, 2026.">
+    <meta name="description" content="Chicago Smart Streets pilot warnings, tickets, listed fines, and street geography through September 12, 2026, with conventional parking ticket comparisons.">
     <title>Chicago Smart Streets Pilot Analysis</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="chicago-early-voting-2026.css">
@@ -19,11 +19,12 @@
         <p class="ev-back">Open-source reproducible analysis</p>
         <p class="streets-kicker">Chicago Department of Finance FOIA Analysis</p>
         <h1>Chicago Smart Streets Pilot</h1>
-        <p class="ev-subtitle">Analysis of a Chicago Department of Finance FOIA obtained by <a href="https://bsky.app/profile/acannon.bsky.social/post/3mltrgwakrk2l">Alex Cannon</a>, with Smart Streets warnings, tickets, fines, and location data through April 25, 2026.</p>
+        <p class="ev-subtitle">Analysis of Chicago Department of Finance FOIA data obtained by <a href="https://bsky.app/profile/acannon.bsky.social/post/3mltrgwakrk2l">Alex Cannon</a>, with Smart Streets warnings, tickets, listed fines, and location data through <span id="streets-through-date">September 12, 2026</span>.</p>
     </div>
 
     <main class="ev-main streets-main">
         <section class="streets-lede" id="streets-lede" aria-live="polite"></section>
+        <p class="ev-caption streets-refresh-note" id="streets-refresh-note"></p>
 
         <section class="ev-cards streets-cards" id="streets-cards" aria-label="Smart Streets summary cards"></section>
 
@@ -63,6 +64,7 @@
                 <div class="ev-map-wrap streets-map-wrap">
                     <h3>Smart Streets Infractions</h3>
                     <p class="ev-caption" id="streets-map-caption">All Violations, aggregated by location.</p>
+                    <p class="ev-caption" id="streets-geocoding-note"></p>
                     <div class="streets-map-legend" id="streets-map-legend"></div>
                     <div id="streets-map" aria-label="Map of Chicago Smart Streets infractions by location and infraction type"></div>
                     <div class="primary-map-status streets-map-status" id="streets-map-status" role="status" aria-live="polite"></div>
@@ -128,39 +130,63 @@
             <div class="streets-chart-card">
                 <div class="streets-card-head">
                     <h3>Monthly warnings and fines issued</h3>
-                    <p>Stacked violations by violation description.</p>
+                    <p id="streets-monthly-note">Stacked violations by violation description. September 2026 is partial, through September 12.</p>
                 </div>
                 <div class="streets-svg-wrap" id="streets-monthly-chart"></div>
                 <div class="streets-chart-legend" id="streets-monthly-legend"></div>
             </div>
         </section>
 
+        <section class="streets-section" aria-labelledby="streets-conventional-title">
+            <div class="streets-section-header">
+                <p class="streets-section-step">4b / Conventional Enforcement</p>
+                <h2 class="ev-section-title" id="streets-conventional-title">Conventional Parking Tickets Before And During The Pilot</h2>
+                <p class="streets-section-copy" id="streets-conventional-intro"></p>
+            </div>
+            <div class="streets-chart-card">
+                <div class="streets-card-head">
+                    <h3>Citywide conventional tickets by year</h3>
+                    <p id="streets-conventional-period"></p>
+                </div>
+                <div class="streets-table-wrap">
+                    <table class="ev-table streets-table">
+                        <thead><tr><th scope="col">Period</th><th scope="col" class="text-right">Bike lane</th><th scope="col" class="text-right">Bus lane</th><th scope="col" class="text-right">Bus/taxi/carriage stand</th><th scope="col" class="text-right">Total</th></tr></thead>
+                        <tbody id="streets-conventional-years"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="streets-chart-card streets-secondary-chart">
+                <div class="streets-card-head">
+                    <h3>Tickets over the shared reporting period</h3>
+                    <p id="streets-comparison-period"></p>
+                </div>
+                <div class="streets-table-wrap">
+                    <table class="ev-table streets-table">
+                        <thead><tr><th scope="col">Violation</th><th scope="col" class="text-right">Conventional tickets, citywide</th><th scope="col" class="text-right">Smart Streets fine-bearing tickets, pilot area</th></tr></thead>
+                        <tbody id="streets-conventional-comparison"></tbody>
+                    </table>
+                </div>
+                <p class="ev-caption" id="streets-comparison-note"></p>
+            </div>
+        </section>
+
         <section class="streets-section">
             <div class="streets-section-header">
                 <p class="streets-section-step">5 / Timing</p>
-                <h2 class="ev-section-title">When Enforcement Activity Shows Up</h2>
+                <h2 class="ev-section-title">When are violations issued?</h2>
             </div>
             <div class="streets-time-layout">
-                <div class="streets-chart-card">
+                <div class="streets-chart-card streets-timing-card">
                     <div class="streets-card-head streets-card-head-row">
                         <div>
-                            <h3>Day of week</h3>
-                            <p>Violations and listed fines by weekday.</p>
+                            <h3>Day of week × hour of day</h3>
                         </div>
-                        <div class="streets-segmented" id="streets-time-metric" aria-label="Timing metric">
-                            <button type="button" class="active" data-metric="records">Violations</button>
-                            <button type="button" data-metric="fines">Fines</button>
+                        <div class="streets-segmented" id="streets-time-metric" role="group" aria-label="Timing metric">
+                            <button type="button" class="active" data-metric="records" aria-pressed="true">Violations</button>
+                            <button type="button" data-metric="fines" aria-pressed="false">Fines</button>
                         </div>
                     </div>
-                    <div class="streets-svg-wrap" id="streets-weekday-chart"></div>
-                </div>
-
-                <div class="streets-chart-card">
-                    <div class="streets-card-head">
-                        <h3>Hour of day</h3>
-                        <p>Timestamp hour from the FOIA extract, interpreted as Chicago local time.</p>
-                    </div>
-                    <div class="streets-svg-wrap" id="streets-hourly-chart"></div>
+                    <div id="streets-timing-heatmap"></div>
                 </div>
             </div>
         </section>
@@ -174,7 +200,7 @@
             <div class="streets-mix-layout">
                 <div class="streets-chart-card">
                     <div class="streets-card-head">
-                        <h3>2026 cumulative fines by infraction type</h3>
+                        <h3><span id="streets-latest-year">2026</span> cumulative fines by infraction type</h3>
                         <p>Fine-bearing categories only, through the final date in the extract.</p>
                     </div>
                     <div class="streets-svg-wrap" id="streets-type-area-chart"></div>
@@ -308,7 +334,7 @@
                     <img src="images/smart-streets/kinzie-protected-230w.jpg" alt="Protected bike lane and curbside dining area at 230 W Kinzie" loading="lazy">
                     <figcaption>
                         <strong>230 W Kinzie: protected bike lane</strong>
-                        <span>No bike-lane tickets and no listed fines at this address in the FOIA extract.</span>
+                        <span id="streets-kinzie-protected-caption">Loading current FOIA totals...</span>
                         <em>Image: Apple Maps screenshot.</em>
                     </figcaption>
                 </figure>
@@ -316,7 +342,7 @@
                     <img src="images/smart-streets/kinzie-unprotected-169w.jpg" alt="Paint-only bike lane blocked by standing vehicles at 169 W Kinzie" loading="lazy">
                     <figcaption>
                         <strong>169 W Kinzie: paint-only bike lane</strong>
-                        <span>400 violations, including 97 bike-lane tickets and $24,340 in listed fines.</span>
+                        <span id="streets-kinzie-unprotected-caption">Loading current FOIA totals...</span>
                         <em>Image: Apple Maps screenshot.</em>
                     </figcaption>
                 </figure>
