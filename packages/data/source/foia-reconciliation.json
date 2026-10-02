@@ -1,0 +1,66 @@
+{
+  "smartStreets": {
+    "previousRecords": 104753,
+    "currentRecords": 130788,
+    "retainedTickets": 104753,
+    "addedTickets": 26035,
+    "removedTickets": 0,
+    "changedTickets": 4735,
+    "changedFields": {
+      "Violation Code": 10,
+      "Violation Description": 10,
+      "Fine Level 1": 10,
+      "Location": 4730
+    },
+    "backfilledTickets": 2699,
+    "previousLastIssuedAt": "2026-06-27T12:12:02",
+    "previousListedFines": 3268640.0,
+    "currentListedFines": 4215140.0,
+    "changedTicketExamples": [
+      "8000123074",
+      "8000151260",
+      "8500004831",
+      "8500004902",
+      "8500005097",
+      "8500005106",
+      "8500005110",
+      "8500005112",
+      "8500005115",
+      "8500005124"
+    ]
+  },
+  "illegalParking": {
+    "records": 43745,
+    "missingLocationRecords": 8392,
+    "violationDescriptions": {
+      "PARK OR STAND IN BUS/TAXI/CARRIAGE STAND": 38450,
+      "PARK/STAND ON BICYCLE PATH": 4499,
+      "STAND, PARK, OR OTHER USE OF BUS LANE": 796
+    },
+    "violationCodes": {
+      "0964140B": 38449,
+      "0940060": 4499,
+      "0912060": 462,
+      "0912060B": 334,
+      "0964140A": 1
+    },
+    "originalNotes": [
+      "Data are accurate as of July 21, 2026.",
+      "Note1: Parking ticket data reflects the information available in the system at the time of retrieval. As records are continuously updated, recent tickets may not appear immediately.",
+      "Note2: The data includes parking violations only for violations in BUS/TAXI STOP, BIKE LANE And BUS LANE.",
+      "Request: P197426 Alex Cannon -\"List of violations / tickets written for illegal parking in BIKE LANE, BUS LANE, or BUS STOP from 2022 to PRESENT with dates and locations\"",
+      "Provided by",
+      "Data Fulfillment and Analysis Section"
+    ]
+  },
+  "originalWorkbooks": [
+    {
+      "filename": "FOIA_Cannon_A52020_20260915.xlsx",
+      "sha256": "e3de09900f0191e62bc1fe3ec4ef66e65c91dbc6ff8259fc6aea2a06f8192e0b"
+    },
+    {
+      "filename": "_P197426_Illegal_Parking.xlsx",
+      "sha256": "ac9d4cb82840f9f03da790bfe151e80189c129ad3bb726e9509c0104fcb95bba"
+    }
+  ]
+}

@@ -4,21 +4,23 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const repoRoot = path.resolve(__dirname, "../../..");
-const dataPackageRoot = path.resolve(__dirname, "..");
 const webDataRoot = path.join(repoRoot, "apps", "web", "public", "data");
 const sourceFilenames = {
-    violations: "smartstreetsapril26.csv",
-    locations: "smartstreetslocdecoder.csv",
+    violations: "FOIA_Cannon_A52020_20260915.csv",
+    locations: "smartstreetslocdecoder-frontage.csv",
     zones: "smartstreetszones.geojson",
+    illegalParking: "_P197426_Illegal_Parking.csv",
+    parkingLocations: "illegal-parking-locations.csv",
+    reconciliation: "foia-reconciliation.json",
+    geocodingAudit: "geocoding-audit.json",
 };
 const sourceRoot = process.env.SMART_STREETS_SOURCE_DIR
     ? path.resolve(process.env.SMART_STREETS_SOURCE_DIR)
-    : path.join(dataPackageRoot, "source");
+    : path.resolve(__dirname, "../source");
 const sourceBaseUrl = trimTrailingSlash(process.env.SMART_STREETS_SOURCE_BASE_URL || "");
-const publicSourceBaseUrl = trimTrailingSlash(process.env.SMART_STREETS_PUBLIC_SOURCE_BASE_URL || (sourceBaseUrl ? sourceBaseUrl : "data/source"));
+const publicSourceBaseUrl = trimTrailingSlash(process.env.SMART_STREETS_PUBLIC_SOURCE_BASE_URL || sourceBaseUrl || "data/source");
 const sourceArchiveUrl = process.env.SMART_STREETS_SOURCE_ARCHIVE_URL
     || (publicSourceBaseUrl ? `${publicSourceBaseUrl}/chicago-smart-streets-pilot-source-files.zip` : "");
-const generatedAt = process.env.SMART_STREETS_GENERATED_AT || "2026-05-14T21:53:00.000Z";
 const wardsPath = process.env.SMART_STREETS_WARDS_GEOJSON
     ? path.resolve(process.env.SMART_STREETS_WARDS_GEOJSON)
     : path.join(webDataRoot, "chicago-wards.geojson");
@@ -37,23 +39,9 @@ const outputPaths = {
 };
 
 const TYPE_DEFINITIONS = {
-    "ZERO FINE WARNING - SMRT ST": {
-        key: "zero_warning",
-        label: "Zero Fine Warning",
-        shortLabel: "Zero Fine Warning",
-        chartLabel: "Zero Fine Warning",
-        color: "#c9c9c9",
-        isWarning: true,
-        sort: 5,
-    },
-    "30 DAY INSTALLATION WARNING - SMRT ST": {
-        key: "install_warning",
-        label: "30 Day Installation Warning",
-        shortLabel: "Installation Warning",
-        chartLabel: "30 Day Installation Warning",
-        color: "#9c9c9c",
-        isWarning: true,
-        sort: 6,
+    "STREET CLEANING - SMRT ST": {
+        key: "street_cleaning", label: "Street Cleaning Violation", shortLabel: "Street Cleaning",
+        chartLabel: "Street Cleaning Violation", color: "#b45309", isWarning: false, sort: 8,
     },
     "PARK/STAND ON BICYCLE PATH - SMRT ST": {
         key: "bike_lane",
@@ -99,6 +87,33 @@ const TYPE_DEFINITIONS = {
         color: "#09098f",
         isWarning: false,
         sort: 4,
+    },
+    "NON PYMT/NON-COM VEH PARKD COM LDNG ZNE - SMRT ST": {
+        key: "commercial_loading_zone",
+        label: "Commercial Loading Zone Violation",
+        shortLabel: "Commercial Loading Zone",
+        chartLabel: "Commercial Loading Zone Violation",
+        color: "#7c3aed",
+        isWarning: false,
+        sort: 5,
+    },
+    "ZERO FINE WARNING - SMRT ST": {
+        key: "zero_warning",
+        label: "Zero Fine Warning",
+        shortLabel: "Zero Fine Warning",
+        chartLabel: "Zero Fine Warning",
+        color: "#c9c9c9",
+        isWarning: true,
+        sort: 6,
+    },
+    "30 DAY INSTALLATION WARNING - SMRT ST": {
+        key: "install_warning",
+        label: "30 Day Installation Warning",
+        shortLabel: "Installation Warning",
+        chartLabel: "30 Day Installation Warning",
+        color: "#9c9c9c",
+        isWarning: true,
+        sort: 7,
     },
 };
 
@@ -186,8 +201,8 @@ async function readTextSource(label, source) {
     } catch (error) {
         error.message = [
             `Could not read ${label} source file at ${source}.`,
-            "Expected source files in packages/data/source,",
-            "or set SMART_STREETS_SOURCE_DIR / SMART_STREETS_SOURCE_BASE_URL to override the source location.",
+            "Set SMART_STREETS_SOURCE_DIR to an external data folder,",
+            "or set SMART_STREETS_SOURCE_BASE_URL to an object-storage URL.",
             `Original error: ${error.message}`,
         ].join(" ");
         throw error;
@@ -247,6 +262,18 @@ function parseCsv(text) {
         header.replace(/^\uFEFF/, ""),
         values[index] ?? "",
     ])));
+}
+
+function assertRequiredColumns(label, rows, requiredColumns) {
+    if (!rows.length) {
+        throw new Error(`${label} source contains no data rows.`);
+    }
+
+    const available = new Set(Object.keys(rows[0]));
+    const missing = requiredColumns.filter((column) => !available.has(column));
+    if (missing.length) {
+        throw new Error(`${label} source is missing required columns: ${missing.join(", ")}`);
+    }
 }
 
 function parseIssuedDate(value) {
@@ -482,25 +509,65 @@ function buildCumulativeSeries(groups, records, startDate, endDate, groupForReco
 }
 
 async function main() {
-    const [violationsText, locationsText, zonesText] = await Promise.all([
+    const { buildIllegalParking } = require("./build-illegal-parking.js");
+    const [violationsText, locationsText, zonesText, parkingText, parkingLocationsText, refreshText, auditText] = await Promise.all([
         readTextSource("violations", sourcePaths.violations),
         readTextSource("locations", sourcePaths.locations),
         readTextSource("zones", sourcePaths.zones),
+        readTextSource("conventional tickets", sourceLocation("illegalParking")),
+        readTextSource("conventional locations", sourceLocation("parkingLocations")),
+        readTextSource("reconciliation", sourceLocation("reconciliation")),
+        readTextSource("geocoding audit", sourceLocation("geocodingAudit")),
     ]);
     const violations = parseCsv(violationsText);
+    if (new Set(violations.map((row) => row["Ticket Number"])).size !== violations.length) {
+        throw new Error("Duplicate Smart Streets ticket numbers");
+    }
     const locationRows = parseCsv(locationsText);
     const zones = JSON.parse(zonesText);
     const wards = JSON.parse(fs.readFileSync(wardsPath, "utf8"));
 
-    const locations = new Map(locationRows.map((row) => [
-        row.orig_location,
-        {
-            longitude: Number(row.longitude),
-            latitude: Number(row.latitude),
-            addressClean: row.address_clean,
-            ward: classifyWard([Number(row.longitude), Number(row.latitude)], wards.features),
-        },
-    ]));
+    assertRequiredColumns("Violations", violations, [
+        "Ticket Number",
+        "Issued Date",
+        "Location",
+        "Violation Code",
+        "Violation Description",
+        "Fine Level 1",
+        "Camera ID",
+    ]);
+    assertRequiredColumns("Location decoder", locationRows, [
+        "orig_location",
+        "address_clean",
+        "latitude",
+        "longitude",
+    ]);
+
+    const unsupportedDescriptions = [...new Set(violations
+        .map((row) => row["Violation Description"])
+        .filter((description) => !TYPE_DEFINITIONS[description]))]
+        .sort();
+    if (unsupportedDescriptions.length) {
+        throw new Error(`Unsupported violation descriptions: ${unsupportedDescriptions.join("; ")}`);
+    }
+
+    const locations = new Map(locationRows.map((row) => {
+        const mapped = row.longitude !== "" && row.latitude !== "" && row.method !== "unresolved";
+        const longitude = mapped ? Number(row.longitude) : null;
+        const latitude = mapped ? Number(row.latitude) : null;
+        if (mapped && (!Number.isFinite(longitude) || !Number.isFinite(latitude) || longitude < -88 || longitude > -87.5 || latitude < 41.6 || latitude > 42.1)) {
+            throw new Error(`Invalid Chicago coordinates: ${row.orig_location}`);
+        }
+        const wardLongitude = mapped && row.ward_longitude ? Number(row.ward_longitude) : longitude;
+        const wardLatitude = mapped && row.ward_latitude ? Number(row.ward_latitude) : latitude;
+        if (mapped && (!Number.isFinite(wardLongitude) || !Number.isFinite(wardLatitude))) throw new Error(`Invalid ward attribution: ${row.orig_location}`);
+        // Where available, attribute to the side documented in the address range.
+        const nearbyWards = mapped ? new Set([[0, 0], [0.000036, 0], [-0.000036, 0], [0, 0.000027], [0, -0.000027]]
+            .map(([dx, dy]) => classifyWard([wardLongitude + dx, wardLatitude + dy], wards.features))) : new Set(["Unknown"]);
+        return [row.orig_location, { longitude, latitude, addressClean: row.address_clean,
+            method: row.method || "legacy", precision: row.precision || "unknown", reason: row.reason || "",
+            ward: nearbyWards.size === 1 ? [...nearbyWards][0] : "Unknown" }];
+    }));
 
     const typeList = Object.values(TYPE_DEFINITIONS).sort((a, b) => a.sort - b.sort);
     const typeKeys = typeList.map((type) => type.key);
@@ -540,12 +607,18 @@ async function main() {
             cameraDepartmentLabel: department.label,
             longitude: location.longitude,
             latitude: location.latitude,
+            geocodingMethod: location.method,
+            locationPrecision: location.precision,
+            geocodingReason: location.reason,
             ward: location.ward,
-            zone: classifyZone(point, zones.features),
+            zone: location.longitude === null ? "Unmapped location" : classifyZone(point, zones.features),
         };
     });
 
     records.sort((a, b) => a.issuedAt - b.issuedAt);
+    const illegalParking = buildIllegalParking(parseCsv(parkingText), parseCsv(parkingLocationsText), records);
+    const refresh = JSON.parse(refreshText);
+    const geocoding = JSON.parse(auditText);
 
     const expansionDailyMap = new Map();
     for (const record of records) {
@@ -592,6 +665,7 @@ async function main() {
     const yearlyMap = new Map();
     const weekdayMap = new Map();
     const hourlyMap = new Map();
+    const weekdayHourMap = new Map();
     const locationMap = new Map();
     const corridorMap = new Map();
     const zoneMap = new Map();
@@ -726,12 +800,33 @@ async function main() {
         incrementTypeBucket(hour.byType, record.typeKey);
         incrementTypeBucket(hour.finesByType, record.typeKey, record.fine);
 
+        const weekdayHourKey = `${record.dayOfWeek}|${record.hour}`;
+        if (!weekdayHourMap.has(weekdayHourKey)) {
+            weekdayHourMap.set(weekdayHourKey, {
+                day: record.dayOfWeek,
+                dayIndex: record.dayOfWeekIndex,
+                hour: record.hour,
+                records: 0,
+                fineRecords: 0,
+                warnings: 0,
+                fines: 0,
+            });
+        }
+        const weekdayHour = weekdayHourMap.get(weekdayHourKey);
+        weekdayHour.records += 1;
+        weekdayHour.fineRecords += isFineRecord ? 1 : 0;
+        weekdayHour.warnings += isFineRecord ? 0 : 1;
+        weekdayHour.fines += record.fine;
+
         if (!locationMap.has(record.location)) {
             locationMap.set(record.location, {
                 name: record.location,
                 corridor: record.corridor,
                 longitude: record.longitude,
                 latitude: record.latitude,
+                geocodingMethod: record.geocodingMethod,
+                locationPrecision: record.locationPrecision,
+                geocodingReason: record.geocodingReason,
                 ward: record.ward,
                 zone: record.zone,
                 records: 0,
@@ -946,6 +1041,17 @@ async function main() {
         byType: emptyTypeObject(typeKeys),
         finesByType: emptyTypeObject(typeKeys),
     });
+    const timingHeatmap = WEEKDAY_ORDER.flatMap((day) => Array.from({ length: 24 }, (_, hour) => (
+        weekdayHourMap.get(`${day}|${hour}`) ?? {
+            day,
+            dayIndex: WEEKDAY_LABELS.indexOf(day),
+            hour,
+            records: 0,
+            fineRecords: 0,
+            warnings: 0,
+            fines: 0,
+        }
+    )));
 
     const wardRows = [...wardMap.values()]
         .map((ward) => ({
@@ -995,6 +1101,8 @@ async function main() {
 
     const summary = {
         totalRecords: records.length,
+        mappedRecords: records.filter((record) => record.longitude !== null).length,
+        unmappedRecords: records.filter((record) => record.longitude === null).length,
         totalFines: records.reduce((sum, record) => sum + record.fine, 0),
         fineRecords: records.filter((record) => record.fine > 0).length,
         warnings: records.filter((record) => record.fine === 0).length,
@@ -1082,6 +1190,10 @@ async function main() {
         publicSourceFile("Smart Streets zones", "zones"),
     ].filter(Boolean);
     const sources = {
+        violationsFile: process.env.SMART_STREETS_VIOLATIONS_SOURCE_NAME
+            || basenameFromSource(sourcePaths.violations).replace(/\.csv$/, ".xlsx"),
+        locationDecoderFile: process.env.SMART_STREETS_LOCATIONS_SOURCE_NAME
+            || basenameFromSource(sourcePaths.locations),
         violationsCsv: basenameFromSource(sourcePaths.violations),
         locationDecoderCsv: basenameFromSource(sourcePaths.locations),
         zonesGeojson: basenameFromSource(sourcePaths.zones),
@@ -1124,15 +1236,18 @@ async function main() {
     }
 
     const notebook = {
-        generatedAt,
+        generatedAt: process.env.SMART_STREETS_GENERATED_AT || "2026-10-02T00:00:00.000Z",
+        refresh,
+        geocoding,
+        illegalParking,
         sources,
         methodology: {
-            dataRange: "Violations are included when they appear in the FOIA extract dated through April 25, 2026.",
+            dataRange: `Violations are included when they appear in the FOIA extract through ${dateEnd}.`,
             fineAmounts: "Listed fines sum the FOIA Fine Level 1 values. Fine-bearing violations are records where Fine Level 1 is greater than zero; listed fines do not measure payment, collection, or adjudication outcomes.",
-            geocoding: "Ticket addresses and zone polygons were geocoded by Alex Cannon. The map aggregates points by location and infraction type for browser performance.",
-            timestamps: "Issued Date values have no timezone offset in the source CSV. The build treats them as Chicago local wall time and does not shift hours or weekdays.",
+            geocoding: "Locations are estimated along the named frontage street using Chicago street-centerline address ranges and parity. Cached Census matches resolve city range gaps. Only addresses unresolved by both methods may use a validated Cook County address point or parcel centroid, projected onto the named street. County results never replace successful city or Census matches. Points represent street positions, not building centroids or exact vehicle positions. Unresolved locations remain in totals and time charts but are excluded from point maps. Conventional ticket locations are block estimates. Zone polygons were supplied by Alex Cannon.",
+            timestamps: "Issued Date values have no timezone offset in the source extract. The build treats them as Chicago local wall time and does not shift hours or weekdays.",
             zoneAssignment: "Points are classified against the supplied Smart Streets zone polygons. A small number of decoded points fall just outside the supplied polygons and are retained.",
-            wardAssignment: "Each decoded violation point is assigned to a Chicago ward polygon from the City of Chicago Data Portal ward boundaries.",
+            wardAssignment: "Ward attribution uses Chicago ward polygons and, when unambiguous, a 6-meter offset toward the address-range side of the street. County fallbacks use the validated starting point on the address parcel for ward attribution. The display point stays on the centerline. Attribution points within approximately 3 meters of a ward boundary, or unresolved locations, have Unknown Ward. Ward results are geographic estimates, not verified vehicle positions.",
             cameraDepartments: "Camera IDs beginning with FI are grouped as Finance, IDs beginning with DT are grouped as Transportation, and IDs without those prefixes are grouped as CTA Bus.",
         },
         summary,
@@ -1143,6 +1258,7 @@ async function main() {
         vehicleCumulative,
         weekdays,
         hourly,
+        timingHeatmap,
         annualCumulative,
         latestYearTypeCumulative: {
             year: latestYear,
@@ -1160,7 +1276,7 @@ async function main() {
         cameras: topEntries(cameraMap, "records", 30),
     };
 
-    const pointFeatures = [...mapPointMap.values()].map((point, index) => ({
+    const pointFeatures = [...mapPointMap.values()].filter((point) => point.longitude !== null && point.latitude !== null).map((point, index) => ({
         type: "Feature",
         id: index + 1,
         properties: {
@@ -1195,7 +1311,10 @@ async function main() {
     console.log(`Wrote ${outputPaths.zones}`);
 }
 
-main().catch((error) => {
-    console.error(error.message);
-    process.exitCode = 1;
-});
+module.exports = { parseCsv, classifyWard, classifyZone, pointInGeometry };
+if (require.main === module) {
+    main().catch((error) => {
+        console.error(error.message);
+        process.exitCode = 1;
+    });
+}

@@ -2,7 +2,7 @@ const SMART_STREETS_DATA_URL = "data/chicago-smart-streets-pilot.json";
 const SMART_STREETS_POINTS_URL = "data/chicago-smart-streets-points.geojson";
 const SMART_STREETS_ZONES_URL = "data/chicago-smart-streets-zones.geojson";
 const SMART_STREETS_WARDS_URL = "data/chicago-wards.geojson";
-const SMART_STREETS_SOURCE_ARCHIVE_URL = window.__CONFIG__?.SMART_STREETS_SOURCE_ARCHIVE_URL || "";
+const SMART_STREETS_SOURCE_ARCHIVE_URL = window.__CONFIG__?.SMART_STREETS_SOURCE_ARCHIVE_URL || "data/source/chicago-smart-streets-pilot-source-files.zip";
 const PROTOMAPS_KEY = window.__CONFIG__?.PROTOMAPS_KEY || "";
 const CHICAGO_WARD_BOUNDARIES_URL = "https://data.cityofchicago.org/Facilities-Geographic-Boundaries/Boundaries-Wards-2023-/p293-wvbd";
 const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
@@ -27,9 +27,10 @@ const percentFmt = new Intl.NumberFormat("en-US", {
     style: "percent",
     maximumFractionDigits: 1,
 });
-const dataLabelPercentFmt = new Intl.NumberFormat("en-US", {
+const timingPercentFmt = new Intl.NumberFormat("en-US", {
     style: "percent",
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
 });
 
 const ANNUAL_COLORS = {
@@ -72,6 +73,8 @@ const MONTH_STACK_ORDER = [
     "bus_stop",
     "expired_meter_non_central",
     "expired_meter_central",
+    "commercial_loading_zone",
+    "street_cleaning",
 ];
 
 const MONTH_TICKS = [
@@ -88,6 +91,16 @@ const MONTH_TICKS = [
     { day: 305, label: "Nov" },
     { day: 335, label: "Dec" },
 ];
+
+const TIMING_DAY_NAMES = {
+    Mon: "Monday",
+    Tue: "Tuesday",
+    Wed: "Wednesday",
+    Thu: "Thursday",
+    Fri: "Friday",
+    Sat: "Saturday",
+    Sun: "Sunday",
+};
 
 const WARD_TABLE_DEFAULT_ASC = new Set(["ward"]);
 
@@ -274,6 +287,7 @@ let wardDetailSort = { col: "records", asc: false };
 let corridorSortMetric = "records";
 let timeMetric = "records";
 let timingResizeTimer = null;
+let timingFocus = { row: 0, hour: 0 };
 
 function fmt(value) {
     return numberFmt.format(Math.round(value || 0));
@@ -372,6 +386,7 @@ function filenameFromUrl(url) {
     }
 }
 
+
 function formatAxisCurrency(value) {
     if (value >= 1000000) return `$${(value / 1000000).toFixed(value >= 2000000 ? 0 : 1)}M`;
     if (value >= 1000) return `$${Math.round(value / 1000)}k`;
@@ -394,16 +409,18 @@ function formatMetricValue(metric, value) {
     return metric === "fines" ? money(value) : fmt(value);
 }
 
-function formatMetricAxis(metric, value) {
-    return metric === "fines" ? formatAxisCurrency(value) : formatAxisNumber(value);
+function formatHourLong(hour) {
+    const normalizedHour = hour % 12 || 12;
+    return `${normalizedHour} ${hour < 12 ? "a.m." : "p.m."}`;
 }
 
-function formatDataLabelValue(metric, value) {
-    return formatMetricValue(metric, value);
+function formatHourRange(hour) {
+    return `${formatHourLong(hour)}–${formatHourLong((hour + 1) % 24)}`;
 }
 
-function formatBarDataLabel(metric, value, total) {
-    return `${formatDataLabelValue(metric, value)} (${dataLabelPercentFmt.format(total ? value / total : 0)})`;
+function timingHeatIntensity(value, maxValue) {
+    if (value <= 0 || maxValue <= 0) return 0;
+    return Math.round((18 + Math.sqrt(value / maxValue) * 82) * 10) / 10;
 }
 
 function selectedCategoryLabel(keys) {
@@ -417,7 +434,8 @@ function last(items) {
     return items[items.length - 1];
 }
 
-function showTooltip(event, html) {
+function showTooltip(event, html, options = {}) {
+    chartTooltip.setAttribute("aria-hidden", options.announce === false ? "true" : "false");
     chartTooltip.innerHTML = html;
     chartTooltip.style.opacity = "1";
 
@@ -515,10 +533,28 @@ function renderLede(data) {
     `;
 }
 
+function renderDatasetCopy(data) {
+    const throughDate = formatDate(data.summary.dateRange.end, { month: "long" });
+    const throughDateElement = document.getElementById("streets-through-date");
+    const latestYearElement = document.getElementById("streets-latest-year");
+
+    if (throughDateElement) throughDateElement.textContent = throughDate;
+    if (latestYearElement) latestYearElement.textContent = data.summary.latestYear;
+    const monthlyNote = document.getElementById("streets-monthly-note");
+    if (monthlyNote) monthlyNote.textContent = `Stacked violations by violation description. The final month is partial, through ${throughDate}.`;
+
+    const description = document.querySelector('meta[name="description"]');
+    if (description) {
+        description.content = `Interactive notebook analysis of Chicago Smart Streets pilot warnings, tickets, fines, corridors, and infraction geography through ${throughDate}.`;
+    }
+}
+
 function renderCards(data) {
     const { summary } = data;
-    const yearly2025 = data.yearly.find((item) => item.year === 2025);
-    const yearly2026 = data.yearly.find((item) => item.year === 2026);
+    const recentYearFines = data.yearly
+        .slice(-2)
+        .map((item) => `${money(item.fines)} in ${item.year}`)
+        .join("; ");
 
     const cards = [
         {
@@ -529,7 +565,7 @@ function renderCards(data) {
         {
             label: "Listed Fines",
             value: money(summary.totalFines),
-            detail: `${money(yearly2025?.fines || 0)} in 2025; ${money(yearly2026?.fines || 0)} in 2026`,
+            detail: recentYearFines,
         },
         {
             label: "Warnings",
@@ -557,6 +593,23 @@ function renderCards(data) {
     `).join("");
 }
 
+function renderRefreshAndComparison(data) {
+    const refresh = data.refresh.smartStreets;
+    document.getElementById("streets-refresh-note").textContent = `September FOIA refresh: ${fmt(refresh.addedTickets)} added tickets, including ${fmt(refresh.backfilledTickets)} issued within the previous reporting period. ${fmt(refresh.changedTickets)} prior tickets were revised; ${fmt(refresh.changedFields.Location || 0)} have revised locations. The new snapshot replaces the July export.`;
+    const parking = data.illegalParking;
+    document.getElementById("streets-geocoding-note").textContent = `Points are estimated on the named frontage street. County address and parcel points fill gaps only after city street ranges and checked Census matches fail. ${fmt(data.summary.unmappedRecords)} records have unresolved locations and remain in totals and charts. Ward assignments near a boundary are marked unknown.`;
+    document.getElementById("streets-conventional-intro").textContent = `A separate FOIA contains ${fmt(parking.totalRecords)} conventional tickets for bike lanes, bus lanes, and bus/taxi/carriage stands across Chicago. These tickets remain separate from the Smart Streets dataset.`;
+    document.getElementById("streets-conventional-period").textContent = `${formatDate(parking.dateRange.start)}–${formatDate(parking.dateRange.end)}. The 2026 period ends June 29; it is not a full year.`;
+    document.getElementById("streets-conventional-years").innerHTML = parking.yearly.map((row) => `
+        <tr><th scope="row">${row.period === "2026" ? "2026 (Jan 1–Jun 29)" : escapeHtml(row.period)}</th><td class="text-right">${fmt(row.bike_lane)}</td><td class="text-right">${fmt(row.bus_lane)}</td><td class="text-right">${fmt(row.bus_stop)}</td><td class="text-right">${fmt(row.records)}</td></tr>
+    `).join("");
+    document.getElementById("streets-comparison-period").textContent = `${formatDate(parking.commonPeriod.start)}–${formatDate(parking.commonPeriod.end)}. Smart Streets warnings and meter/loading-zone tickets are excluded from this table.`;
+    document.getElementById("streets-conventional-comparison").innerHTML = parking.commonPeriod.categories.map((row) => `
+        <tr><th scope="row">${row.key === "bus_stop" ? "Bus/taxi/carriage stand vs. Smart Streets bus stop" : escapeHtml(row.label)}</th><td class="text-right">${fmt(row.conventionalTickets)}</td><td class="text-right">${fmt(row.smartStreetsFineTickets)}</td></tr>
+    `).join("");
+    document.getElementById("streets-comparison-note").textContent = `${parking.note} ${fmt(parking.missingLocationRecords)} conventional tickets have no location.`;
+}
+
 function renderAnnualCumulativeChart(data) {
     const container = document.getElementById("streets-annual-chart");
     const layout = responsiveChartLayout(container, 980, 320, 410);
@@ -574,6 +627,7 @@ function renderAnnualCumulativeChart(data) {
     const axisFontSize = compact ? 11 : 12;
     const labelFontSize = compact ? 12 : 13;
     const lineWidth = compact ? 4.5 : 4;
+    const earliestYear = Math.min(...data.annualCumulative.map((series) => series.year));
 
     const grid = yTicks.map((tick) => `
         <line x1="${margin.left}" x2="${width - margin.right}" y1="${y(tick)}" y2="${y(tick)}" stroke="currentColor" stroke-opacity="${tick === 0 ? 0.35 : 0.12}"></line>
@@ -597,7 +651,7 @@ function renderAnnualCumulativeChart(data) {
         return `
             <path d="${path}" fill="none" stroke="${color}" stroke-width="${lineWidth}" stroke-linecap="round" stroke-linejoin="round"></path>
             <circle cx="${x(endpoint.dayOfYear)}" cy="${y(endpoint.cumulativeFines)}" r="${compact ? 4.2 : 4.5}" fill="${color}"></circle>
-            ${compact && series.year === 2024 ? "" : `<text x="${labelX}" y="${y(endpoint.cumulativeFines) - 8}" text-anchor="${labelAnchor}" font-size="${labelFontSize}" font-weight="700" fill="${color}">${labelText}</text>`}
+            ${compact && series.year === earliestYear ? "" : `<text x="${labelX}" y="${y(endpoint.cumulativeFines) - 8}" text-anchor="${labelAnchor}" font-size="${labelFontSize}" font-weight="700" fill="${color}">${labelText}</text>`}
         `;
     }).join("");
 
@@ -883,118 +937,227 @@ function renderMonthlyChart(data) {
     svg.addEventListener("mouseleave", hideTooltip);
 }
 
-function renderTimingBarChart(containerId, items, config) {
-    const container = document.getElementById(containerId);
-    const availableWidth = chartContentWidth(container, config.width);
-    const compact = availableWidth < 520;
-    const width = compact ? Math.max(300, Math.floor(availableWidth)) : config.width;
-    const rowHeight = compact ? (config.mobileRowHeight || config.rowHeight || 30) : (config.rowHeight || 30);
-    const margin = {
-        top: config.topMargin || 28,
-        right: compact ? (config.mobileRightMargin || 12) : (config.rightMargin || 18),
-        bottom: config.bottomMargin || 44,
-        left: compact ? (config.mobileLeftMargin || config.leftMargin || 54) : (config.leftMargin || 64),
+function renderTimingHeatmap(data) {
+    const container = document.getElementById("streets-timing-heatmap");
+    const cells = Array.isArray(data.timingHeatmap) ? data.timingHeatmap : [];
+
+    if (cells.length !== 168) {
+        container.innerHTML = '<p class="streets-empty-state">Timing detail is unavailable in this data release.</p>';
+        return;
+    }
+
+    const metricLabel = timeMetric === "fines" ? "listed fines" : "violations";
+    const metricLabelTitle = timeMetric === "fines" ? "Listed fines" : "Violations";
+    const grandTotal = timeMetric === "fines" ? data.summary.totalFines : data.summary.totalRecords;
+    const maxValue = Math.max(...cells.map((cell) => Number(cell[timeMetric]) || 0), 1);
+    const cellByKey = new Map(cells.map((cell) => [`${cell.day}|${cell.hour}`, cell]));
+    const weekdays = data.weekdays.slice(0, 7);
+    const hours = Array.from({ length: 24 }, (_, hour) => hour);
+
+    timingFocus = {
+        row: Math.max(0, Math.min(weekdays.length - 1, timingFocus.row)),
+        hour: Math.max(0, Math.min(23, timingFocus.hour)),
     };
-    const height = margin.top + margin.bottom + rowHeight * items.length;
-    const plotWidth = width - margin.left - margin.right;
-    const values = items.map((item) => item[timeMetric] || 0);
-    const totalValue = values.reduce((sum, value) => sum + value, 0);
-    const xTicks = niceTicks(Math.max(...values, 1) * (config.labelPadFactor || 1.42), 5);
-    const xMax = last(xTicks) || 1;
-    const x = (value) => margin.left + value / xMax * plotWidth;
-    const chartBottom = height - margin.bottom;
-    const barHeight = Math.min(config.maxBarHeight || 18, rowHeight * 0.62);
-    const fill = timeMetric === "fines" ? "#009b3a" : "#2364aa";
 
-    const grid = xTicks.map((tick) => {
-        const tickX = x(tick);
-        return `
-        <line x1="${tickX}" x2="${tickX}" y1="${margin.top}" y2="${chartBottom}" stroke="currentColor" stroke-opacity="${tick === 0 ? 0.35 : 0.12}"></line>
-        <text x="${tickX}" y="${height - 18}" text-anchor="middle" font-size="${compact ? 10 : 11}" fill="currentColor">${formatMetricAxis(timeMetric, tick)}</text>
-    `;
-    }).join("");
+    const hourHeadings = hours.map((hour) => `
+        <th class="streets-hour-heading" scope="col" title="${escapeHtml(formatHourLong(hour))}">
+            <span class="streets-hour-label-full" aria-hidden="true">${formatHourLabel(hour)}</span>
+            <span class="streets-hour-label-compact" aria-hidden="true">${hour}</span>
+            <span class="streets-visually-hidden">${escapeHtml(formatHourLong(hour))}</span>
+        </th>
+    `).join("");
 
-    const bars = items.map((item, index) => {
-        const value = item[timeMetric] || 0;
-        const yCenter = margin.top + index * rowHeight + rowHeight / 2;
-        const y0 = yCenter - barHeight / 2;
-        const barEnd = x(value);
-        const widthValue = Math.max(value ? 2 : 0, barEnd - margin.left);
-        const label = config.label(item, index);
-        const shouldLabel = config.showEveryLabel || index % config.labelEvery === 0;
-        const dataLabel = formatBarDataLabel(timeMetric, value, totalValue);
-        const dataLabelX = value ? barEnd + 8 : margin.left + 8;
-        const dataLabelY = yCenter + 4;
+    const rows = weekdays.map((day, rowIndex) => {
+        const fullDayName = TIMING_DAY_NAMES[day.day] || day.day;
+        const totalValue = Number(day[timeMetric]) || 0;
+        const totalShare = grandTotal ? totalValue / grandTotal : 0;
+        const dayCells = hours.map((hour) => {
+            const cell = cellByKey.get(`${day.day}|${hour}`) || {
+                day: day.day,
+                hour,
+                records: 0,
+                fineRecords: 0,
+                warnings: 0,
+                fines: 0,
+            };
+            const selectedValue = Number(cell[timeMetric]) || 0;
+            const selectedShare = grandTotal ? selectedValue / grandTotal : 0;
+            const complementaryMetric = timeMetric === "fines"
+                ? `${fmt(cell.records)} violation${Number(cell.records) === 1 ? "" : "s"}`
+                : `${money(cell.fines)} listed fines`;
+            const fineRecordLabel = `${fmt(cell.fineRecords)} fine-bearing violation${Number(cell.fineRecords) === 1 ? "" : "s"}`;
+            const warningLabel = `${fmt(cell.warnings)} warning${Number(cell.warnings) === 1 ? "" : "s"}`;
+            const ariaLabel = `${fullDayName}, ${formatHourRange(hour)}: ${formatMetricValue(timeMetric, selectedValue)} ${metricLabel}, ${timingPercentFmt.format(selectedShare)} of all ${metricLabel}; ${complementaryMetric}; ${fineRecordLabel}; ${warningLabel}.`;
+            const tabindex = timingFocus.row === rowIndex && timingFocus.hour === hour ? 0 : -1;
+
+            return `
+                <td class="streets-heatmap-data">
+                    <button type="button"
+                        class="streets-heat-cell"
+                        style="--streets-heat-intensity: ${timingHeatIntensity(selectedValue, maxValue)}%"
+                        data-row="${rowIndex}" data-hour="${hour}"
+                        data-day="${escapeHtml(day.day)}" data-day-name="${escapeHtml(fullDayName)}"
+                        data-records="${Number(cell.records) || 0}"
+                        data-fine-records="${Number(cell.fineRecords) || 0}"
+                        data-warnings="${Number(cell.warnings) || 0}"
+                        data-fines="${Number(cell.fines) || 0}"
+                        aria-label="${escapeHtml(ariaLabel)}" tabindex="${tabindex}">
+                    </button>
+                </td>
+            `;
+        }).join("");
+
         return `
-            ${shouldLabel ? `<text x="${margin.left - 10}" y="${dataLabelY}" text-anchor="end" font-size="${compact ? (config.mobileAxisLabelSize || config.axisLabelSize || 10.5) : (config.axisLabelSize || 11)}" fill="currentColor">${escapeHtml(label)}</text>` : ""}
-            <rect class="time-bar"
-                x="${margin.left}" y="${y0}" width="${widthValue}" height="${barHeight}" rx="4"
-                fill="${fill}" data-label="${escapeHtml(config.tooltipLabel(item))}"
-                data-records="${item.records}" data-fine-records="${item.fineRecords}"
-                data-warnings="${item.warnings}" data-fines="${item.fines}">
-            </rect>
-            <text class="streets-data-label" x="${dataLabelX}" y="${dataLabelY}" text-anchor="start" font-size="${compact ? (config.mobileDataLabelSize || config.dataLabelSize || 10) : (config.dataLabelSize || 11)}" fill="currentColor">${escapeHtml(dataLabel)}</text>
+            <tr>
+                <th class="streets-day-heading" scope="row"><span aria-hidden="true">${escapeHtml(day.day)}</span><span class="streets-visually-hidden">${escapeHtml(fullDayName)}</span></th>
+                ${dayCells}
+                <td class="streets-timing-total streets-day-total" aria-label="${escapeHtml(`${fullDayName} total: ${formatMetricValue(timeMetric, totalValue)}, ${timingPercentFmt.format(totalShare)} of all ${metricLabel}.`)}">
+                    <strong>${formatMetricValue(timeMetric, totalValue)}</strong>
+                    <span>${timingPercentFmt.format(totalShare)}</span>
+                </td>
+            </tr>
         `;
     }).join("");
 
+    const hourTotals = hours.map((hour) => {
+        const hourItem = data.hourly.find((item) => item.hour === hour) || {};
+        const totalValue = Number(hourItem[timeMetric]) || 0;
+        const totalShare = grandTotal ? totalValue / grandTotal : 0;
+        return `
+            <td class="streets-timing-total streets-hour-total" aria-label="${escapeHtml(`${formatHourRange(hour)} total: ${formatMetricValue(timeMetric, totalValue)}, ${timingPercentFmt.format(totalShare)} of all ${metricLabel}.`)}">
+                <div class="streets-hour-total-stack">
+                    <strong>${formatMetricValue(timeMetric, totalValue)}</strong>
+                    <span>${timingPercentFmt.format(totalShare)}</span>
+                </div>
+            </td>
+        `;
+    }).join("");
+
+    container.dataset.metric = timeMetric;
     container.innerHTML = `
-        <svg class="streets-svg" role="img" aria-label="${config.ariaLabel}" viewBox="0 0 ${width} ${height}">
-            ${grid}
-            ${bars}
-        </svg>
+        <p class="streets-visually-hidden" role="status">Showing ${metricLabel} by weekday and hour.</p>
+        <div class="streets-heatmap-scroll" role="region" aria-label="${metricLabelTitle} by weekday and hour">
+            <table class="streets-timing-table">
+                <caption class="streets-visually-hidden">${metricLabelTitle} by day of week and hour of day. Use arrow keys to move between cells. Day totals are on the right and hour totals are below.</caption>
+                <colgroup>
+                    <col class="streets-day-column">
+                    ${hours.map(() => "<col>").join("")}
+                    <col class="streets-day-total-column">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th class="streets-day-heading streets-corner-heading" scope="col">Day</th>
+                        ${hourHeadings}
+                        <th class="streets-day-total streets-total-heading" scope="col">Day total</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+                <tfoot>
+                    <tr>
+                        <th class="streets-hour-total-label" scope="row">Hour total</th>
+                        ${hourTotals}
+                        <td class="streets-timing-total streets-grand-total" aria-label="Grand total: ${escapeHtml(formatMetricValue(timeMetric, grandTotal))}.">
+                            <strong>${formatMetricValue(timeMetric, grandTotal)}</strong>
+                            <span>${timingPercentFmt.format(grandTotal ? 1 : 0)}</span>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <div class="streets-heatmap-meta">
+            <div class="streets-heatmap-legend" aria-label="Color intensity from fewer to more ${metricLabel}">
+                <span>Less</span>
+                <span class="streets-heat-gradient" aria-hidden="true"></span>
+                <span>More ${metricLabel}</span>
+            </div>
+        </div>
     `;
 
-    const svg = container.querySelector("svg");
-    svg.addEventListener("mousemove", (event) => {
-        const target = event.target.closest?.(".time-bar");
-        if (!target) {
+    const table = container.querySelector(".streets-timing-table");
+    const showCellTooltip = (button, event) => {
+        const records = Number(button.dataset.records);
+        const fineRecords = Number(button.dataset.fineRecords);
+        const warnings = Number(button.dataset.warnings);
+        const fines = Number(button.dataset.fines);
+        const selectedValue = timeMetric === "fines" ? fines : records;
+        const selectedShare = grandTotal ? selectedValue / grandTotal : 0;
+        const anchor = event?.clientX !== undefined
+            ? event
+            : (() => {
+                const rect = button.getBoundingClientRect();
+                return { clientX: rect.right, clientY: rect.top };
+            })();
+
+        showTooltip(anchor, `
+            <strong>${button.dataset.dayName}, ${formatHourRange(Number(button.dataset.hour))}</strong>
+            ${tooltipRow(metricLabelTitle, formatMetricValue(timeMetric, selectedValue))}
+            ${tooltipRow(`Share of all ${metricLabel}`, timingPercentFmt.format(selectedShare))}
+            ${timeMetric === "records" ? tooltipRow("Listed fines", money(fines)) : tooltipRow("Violations", fmt(records))}
+            ${tooltipRow("Fine-bearing violations", fmt(fineRecords))}
+            ${tooltipRow("Warnings", fmt(warnings))}
+        `, { announce: false });
+    };
+
+    table.addEventListener("mousemove", (event) => {
+        const button = event.target.closest?.(".streets-heat-cell");
+        if (!button) {
             hideTooltip();
             return;
         }
-
-        const selectedMetricLabel = timeMetric === "fines" ? "Listed fines" : "Violations";
-        const selectedMetricValue = Number(target.dataset[timeMetric === "fines" ? "fines" : "records"]);
-        const extraFineRow = timeMetric === "fines" ? "" : tooltipRow("Listed fines", money(Number(target.dataset.fines)));
-
-        showTooltip(event, `
-            <strong>${target.dataset.label}</strong>
-            ${tooltipRow(selectedMetricLabel, formatMetricValue(timeMetric, selectedMetricValue))}
-            ${tooltipRow("Fine-bearing violations", fmt(Number(target.dataset.fineRecords)))}
-            ${tooltipRow("Warnings", fmt(Number(target.dataset.warnings)))}
-            ${extraFineRow}
-        `);
+        showCellTooltip(button, event);
     });
-    svg.addEventListener("mouseleave", hideTooltip);
-}
-
-function renderTimingCharts(data) {
-    renderTimingBarChart("streets-weekday-chart", data.weekdays, {
-        width: 760,
-        leftMargin: 54,
-        rowHeight: 34,
-        maxBarHeight: 18,
-        topMargin: 24,
-        dataLabelSize: 10.5,
-        showEveryLabel: true,
-        labelEvery: 1,
-        label: (item) => item.day,
-        tooltipLabel: (item) => item.day,
-        ariaLabel: "Smart Streets violations and fines by day of week",
+    table.addEventListener("mouseleave", hideTooltip);
+    table.addEventListener("focusin", (event) => {
+        const button = event.target.closest?.(".streets-heat-cell");
+        if (button) showCellTooltip(button);
     });
+    table.addEventListener("focusout", (event) => {
+        if (!event.relatedTarget?.closest?.(".streets-heat-cell")) hideTooltip();
+    });
+    table.addEventListener("click", (event) => {
+        const button = event.target.closest?.(".streets-heat-cell");
+        if (!button) return;
+        timingFocus = { row: Number(button.dataset.row), hour: Number(button.dataset.hour) };
+        table.querySelectorAll(".streets-heat-cell").forEach((cell) => {
+            cell.tabIndex = cell === button ? 0 : -1;
+        });
+        showCellTooltip(button, event);
+        window.setTimeout(() => {
+            document.addEventListener("pointerdown", hideTooltip, { capture: true, once: true });
+        }, 0);
+    });
+    table.addEventListener("keydown", (event) => {
+        const button = event.target.closest?.(".streets-heat-cell");
+        if (!button) return;
 
-    renderTimingBarChart("streets-hourly-chart", data.hourly, {
-        width: 760,
-        leftMargin: 54,
-        rowHeight: 23,
-        maxBarHeight: 12,
-        topMargin: 24,
-        dataLabelSize: 9.5,
-        axisLabelSize: 10,
-        showEveryLabel: true,
-        labelEvery: 1,
-        label: (item) => formatHourLabel(item.hour),
-        tooltipLabel: (item) => `${formatHourLabel(item.hour)} hour`,
-        ariaLabel: "Smart Streets violations and fines by hour of day",
+        let row = Number(button.dataset.row);
+        let hour = Number(button.dataset.hour);
+        const commandKey = event.ctrlKey || event.metaKey;
+
+        if (event.key === "ArrowLeft") hour = Math.max(0, hour - 1);
+        else if (event.key === "ArrowRight") hour = Math.min(23, hour + 1);
+        else if (event.key === "ArrowUp") row = Math.max(0, row - 1);
+        else if (event.key === "ArrowDown") row = Math.min(weekdays.length - 1, row + 1);
+        else if (event.key === "Home") {
+            hour = 0;
+            if (commandKey) row = 0;
+        } else if (event.key === "End") {
+            hour = 23;
+            if (commandKey) row = weekdays.length - 1;
+        } else {
+            return;
+        }
+
+        event.preventDefault();
+        timingFocus = { row, hour };
+        table.querySelectorAll(".streets-heat-cell").forEach((cell) => {
+            cell.tabIndex = -1;
+        });
+        const target = table.querySelector(`.streets-heat-cell[data-row="${row}"][data-hour="${hour}"]`);
+        if (target) {
+            target.tabIndex = 0;
+            target.focus();
+        }
     });
 }
 
@@ -1131,11 +1294,11 @@ function renderTypeAnalysis(data) {
         <div class="streets-analysis-list">
             <div class="streets-analysis-row">
                 <div class="streets-analysis-value">${pct(topFine.fines / totalFines)}</div>
-                <div class="streets-analysis-label">Share of all listed fines from bike-lane violations</div>
+                <div class="streets-analysis-label">Share of all listed fines from ${escapeHtml(topFine.shortLabel.toLowerCase())} violations</div>
             </div>
             <div class="streets-analysis-row">
                 <div class="streets-analysis-value">${money(data.summary.latestYearAverageDailyFines)}</div>
-                <div class="streets-analysis-label">Average listed fines per active 2026 enforcement day</div>
+                <div class="streets-analysis-label">Average listed fines per active ${data.summary.latestYear} enforcement day</div>
             </div>
             <div class="streets-analysis-row">
                 <div class="streets-analysis-value">${formatDate(data.summary.firstFineDate)}</div>
@@ -1416,8 +1579,8 @@ function renderSources(data) {
         filename: filenameFromUrl(SMART_STREETS_SOURCE_ARCHIVE_URL),
         href: SMART_STREETS_SOURCE_ARCHIVE_URL,
     } : null);
-    const sourceFiles = data.sources.sourceFiles || [];
     const wardBoundariesUrl = data.sources.wardBoundariesUrl || CHICAGO_WARD_BOUNDARIES_URL;
+    const violationsFile = data.sources.violationsFile || data.sources.violationsCsv || "FOIA export";
 
     document.getElementById("streets-sources").innerHTML = `
         <h3>Sources And Methodology</h3>
@@ -1428,11 +1591,13 @@ function renderSources(data) {
         ` : ""}
         <ul>
             ${data.sources.primaryLinks.map((link) => `<li><a href="${link.href}">${escapeHtml(link.label)}</a></li>`).join("")}
-            <li>Violation data: Chicago Department of Finance FOIA export, ${escapeHtml(data.sources.violationsCsv)}, through ${formatDate(data.summary.dateRange.end)}.</li>
+            <li>Violation data: Chicago Department of Finance FOIA export, ${escapeHtml(violationsFile)}, through ${formatDate(data.summary.dateRange.end)}.</li>
             <li>Metrics: "Listed fines" sums the FOIA <code>Fine Level 1</code> values. "Fine-bearing violations" are records where that field is greater than zero; listed fines do not measure payment, collection, or adjudication outcomes.</li>
-            <li>Geography: Ticket addresses and zone polygons geocoded by Alex Cannon. Ward boundaries from the <a href="${escapeHtml(wardBoundariesUrl)}">City of Chicago Data Portal</a>. The point map aggregates by address and infraction type.</li>
-            ${sourceFiles.length ? `<li>Raw source files: ${sourceFiles.map((file) => `<a href="${escapeHtml(file.href)}" download>${escapeHtml(file.filename)}</a>`).join(", ")}.</li>` : ""}
-            ${sourceArchive ? `<li>Download archive: ${escapeHtml(sourceArchive.filename)} contains the FOIA export, location decoder, and zone GeoJSON used to rebuild this page.</li>` : ""}
+            <li>Geography: ${escapeHtml(data.methodology.geocoding)} Street geometry and address ranges from <a href="https://data.cityofchicago.org/d/pr57-gg9e">Chicago street centerlines</a>, downloaded ${escapeHtml(data.geocoding.streetSnapshotDate)}. Difficult addresses use a cached <a href="https://geocoding.geo.census.gov/geocoder/">Census Geocoder</a> match projected onto the same named street and block, within 35 meters. County fallbacks use <a href="https://datacatalog.cookcountyil.gov/Boundaries-Districts/Cook-County-Address-Points/78yw-iddh/about_data">Cook County address points</a> or <a href="https://datacatalog.cookcountyil.gov/Property-Taxation/Assessor-Parcel-Universe-Current-Year-Only-/pabr-t5kh/about_data">parcel centroids</a> only when both prior methods fail. Ward boundaries from the <a href="${escapeHtml(wardBoundariesUrl)}">City of Chicago Data Portal</a>.</li>
+            <li>Ward estimates: ${escapeHtml(data.methodology.wardAssignment)}</li>
+            <li>Conventional enforcement: ${escapeHtml(data.illegalParking.sourceFile)}, records through ${formatDate(data.illegalParking.dateRange.end)}, accurate as of ${formatDate(data.illegalParking.accurateAsOf)}. Fine and payment amounts are not supplied.</li>
+            <li>Open source repository: <a href="https://github.com/MisterClean/chicago-smart-streets-pilot">MisterClean/chicago-smart-streets-pilot</a>.</li>
+            ${sourceArchive ? `<li>Download archive: ${escapeHtml(sourceArchive.filename)} contains both original FOIA workbooks, normalized CSVs, frontage and block location lookups, reference street data, cached Census and county fallback results, geocoding review files, reconciliation notes, and zone GeoJSON.</li>` : ""}
             <li>Disclaimer: This analysis and derived data are provided as-is for informational purposes only, without warranties of accuracy, completeness, or fitness for any use.</li>
         </ul>
         <div class="streets-fine-schedule">
@@ -1674,7 +1839,10 @@ function updateMapStatus() {
             };
     const typeLabel = category ? category.label : "all categories";
     const wardLabel = ward ? ` in ${ward.name}` : "";
-    document.getElementById("streets-map-caption").textContent = `${fmt(metrics.records)} violations and ${money(metrics.fines)} in listed fines across ${typeLabel}${wardLabel}.`;
+    const mapped = streetsData.locations.filter((location) => Number.isFinite(location.longitude) && Number.isFinite(location.latitude)
+        && (selectedMapWard === "all" || location.ward === selectedMapWard))
+        .reduce((sum, location) => sum + summarizeMetricsForKeys(location, keys).records, 0);
+    document.getElementById("streets-map-caption").textContent = `${fmt(mapped)} of ${fmt(metrics.records)} reported violations mapped across ${typeLabel}${wardLabel}. ${money(metrics.fines)} in listed fines across all matching records.`;
     document.getElementById("streets-map-ward-note").textContent = ward
         ? `${ward.name}: ${fmt(metrics.records)} violations and ${money(metrics.fines)} in listed fines for the active layer.`
         : "Map includes all wards.";
@@ -1831,6 +1999,7 @@ function renderMapLegend(data) {
 function renderMapTopLocations(data) {
     const keys = selectedMapKeys();
     const rows = rankItemsForSelection(data.locations, keys, "records")
+        .filter((location) => Number.isFinite(location.longitude) && Number.isFinite(location.latitude))
         .filter((location) => selectedMapWard === "all" || location.ward === selectedMapWard)
         .slice(0, 6);
     const container = document.getElementById("streets-map-top-locations");
@@ -1851,7 +2020,7 @@ function renderMapTopLocations(data) {
 function buildAllViolationFeatureCollection(data) {
     return {
         type: "FeatureCollection",
-        features: data.locations.map((location, index) => ({
+        features: data.locations.filter((location) => Number.isFinite(location.longitude) && Number.isFinite(location.latitude)).map((location, index) => ({
             type: "Feature",
             id: index + 1,
             properties: {
@@ -1924,6 +2093,18 @@ function renderKinzieDesignStats(data) {
     const protectedSummary = summarizeKinzieRange(data, KINZIE_PROTECTED_RANGE);
     const unprotectedSummary = summarizeKinzieRange(data, KINZIE_UNPROTECTED_RANGE);
     const container = document.getElementById("streets-kinzie-stats");
+    const protectedLocation = data.locations.find((location) => location.name === "230 W KINZIE ST");
+    const unprotectedLocation = data.locations.find((location) => location.name === "169 W KINZIE ST");
+
+    const protectedCaption = document.getElementById("streets-kinzie-protected-caption");
+    const unprotectedCaption = document.getElementById("streets-kinzie-unprotected-caption");
+    if (protectedCaption && protectedLocation) {
+        protectedCaption.textContent = `${fmt(protectedLocation.records)} total violations, including ${fmt(protectedLocation.byType?.bike_lane || 0)} bike-lane tickets and ${money(protectedLocation.fines)} in listed fines.`;
+    }
+    if (unprotectedCaption && unprotectedLocation) {
+        unprotectedCaption.textContent = `${fmt(unprotectedLocation.records)} violations, including ${fmt(unprotectedLocation.byType?.bike_lane || 0)} bike-lane tickets and ${money(unprotectedLocation.fines)} in listed fines.`;
+    }
+
     if (!container) return;
 
     container.innerHTML = `
@@ -1974,7 +2155,7 @@ function kinzieExample(data, address, treatment, detail, color, offset) {
     return {
         location,
         treatment,
-        detail,
+        detail: detail || `${fmt(location.records)} violations, including ${fmt(location.byType?.bike_lane || 0)} bike-lane tickets and ${money(location.fines)} in listed fines.`,
         color,
         offset,
     };
@@ -2121,7 +2302,7 @@ async function initializeKinzieMap(data) {
 
         [
             kinzieExample(data, "169 W KINZIE ST", "Paint-only bike lane", "Highest Kinzie location in the extract.", KINZIE_UNPROTECTED_COLOR, [42, 0]),
-            kinzieExample(data, "230 W KINZIE ST", "Protected bike lane", "No bike-lane tickets or listed fines at this address.", KINZIE_PROTECTED_COLOR, [-36, 0]),
+            kinzieExample(data, "230 W KINZIE ST", "Protected bike lane", null, KINZIE_PROTECTED_COLOR, [-36, 0]),
         ].filter(Boolean).forEach((example) => addKinzieExampleMarker(streetsKinzieMap, example));
 
         streetsKinzieMap.fitBounds(KINZIE_BOUNDS, {
@@ -2394,9 +2575,11 @@ function bindTimeMetricControls() {
         button.addEventListener("click", () => {
             timeMetric = button.dataset.metric;
             document.querySelectorAll("#streets-time-metric button").forEach((item) => {
-                item.classList.toggle("active", item === button);
+                const isActive = item === button;
+                item.classList.toggle("active", isActive);
+                item.setAttribute("aria-pressed", String(isActive));
             });
-            renderTimingCharts(streetsData);
+            renderTimingHeatmap(streetsData);
         });
     });
 }
@@ -2421,7 +2604,6 @@ function bindTimingResize() {
             renderAnnualCumulativeChart(streetsData);
             renderVehicleCumulativeChart(streetsData);
             renderMonthlyChart(streetsData);
-            renderTimingCharts(streetsData);
             renderTypeAreaChart(streetsData);
         }, 120);
     });
@@ -2434,8 +2616,10 @@ async function initSmartStreets() {
     selectedMapLayer = MAP_ALL_KEY;
     selectedCorridorTypes = new Set(streetsData.categories.map((category) => category.key));
 
+    renderDatasetCopy(streetsData);
     renderLede(streetsData);
     renderCards(streetsData);
+    renderRefreshAndComparison(streetsData);
     renderMapControls(streetsData);
     renderWardMapControl(streetsData);
     renderMapLegend(streetsData);
@@ -2444,7 +2628,7 @@ async function initSmartStreets() {
     renderVehicleCumulativeChart(streetsData);
     bindVehicleModeControls();
     renderMonthlyChart(streetsData);
-    renderTimingCharts(streetsData);
+    renderTimingHeatmap(streetsData);
     bindTimeMetricControls();
     bindTimingResize();
     renderTypeAreaChart(streetsData);
@@ -2467,6 +2651,10 @@ async function initSmartStreets() {
 document.addEventListener("DOMContentLoaded", () => {
     initSmartStreets().catch((error) => {
         console.error(error);
-        document.getElementById("streets-lede").innerHTML = "<p>Smart Streets data failed to load.</p>";
+        const localServerUrl = "http://127.0.0.1:5173/";
+        const message = window.location.protocol === "file:"
+            ? `Smart Streets data cannot load from a direct file URL. Open this page through the local server instead: <a href="${localServerUrl}">${localServerUrl}</a>.`
+            : "Smart Streets data failed to load.";
+        document.getElementById("streets-lede").innerHTML = `<p>${message}</p>`;
     });
 });

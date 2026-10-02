@@ -1,6 +1,6 @@
 # Chicago Smart Streets Pilot
 
-Open, reproducible analysis of Chicago Smart Streets pilot warnings, citations, listed fines, corridors, wards, and infraction geography through April 25, 2026.
+Open, reproducible analysis of Chicago Smart Streets pilot warnings, citations, listed fines, corridors, wards, and frontage-street geography through September 12, 2026, with a separate conventional parking-ticket history for 2022–June 2026.
 
 This repo isolates the Smart Streets pilot page from the original private website. The raw source files, derived web data, build script, static page, and source-download archive all live in this monorepo.
 
@@ -16,6 +16,7 @@ This repo isolates the Smart Streets pilot page from the original private websit
 
 - Node.js 24 or newer.
 - A Protomaps API key for full basemap tiles. The page still renders the data overlays without a key, but the basemap is intentionally plain.
+- Python 3.12+ and `openpyxl` only when converting new XLSX workbooks. Ordinary data/geocoding builds need only Node.js and the committed sources.
 
 ## Setup
 
@@ -54,9 +55,15 @@ Vite will print a local URL, usually `http://127.0.0.1:5173/`.
 
 The raw source inputs are committed in `packages/data/source/`:
 
-- `smartstreetsapril26.csv`
-- `smartstreetslocdecoder.csv`
+- `FOIA_Cannon_A52020_20260915.xlsx` and its normalized CSV
+- `_P197426_Illegal_Parking.xlsx` and its normalized CSV
+- `smartstreetslocdecoder-frontage.csv` and `illegal-parking-locations.csv`
+- `chicago-street-centerlines.json.gz`, `census-geocoding-cache.json`, and `county-geocoding-fallback.json`
+- `county-fallback-evidence.zip` with scoped API responses and review outputs
+- `foia-reconciliation.json`, `geocoding-audit.json`, and review queues
 - `smartstreetszones.geojson`
+
+See [source notes](packages/data/source/SOURCE-NOTES.md) for reconciliation findings, checksums, precision, and comparison limits. The April CSV and decoder remain for historical inspection; `previous/` contains the July snapshot used for reconciliation.
 
 Regenerate the browser assets with:
 
@@ -76,7 +83,21 @@ Ward boundaries are read from `apps/web/public/data/chicago-wards.geojson`, sour
 SMART_STREETS_WARDS_GEOJSON=/path/to/chicago-wards.geojson npm run build:data
 ```
 
-The default `generatedAt` timestamp is pinned to the source snapshot date so repeated builds are stable. Set `SMART_STREETS_GENERATED_AT` if you intentionally refresh the source snapshot.
+The default `generatedAt` timestamp is pinned to this October 2, 2026 refresh so repeated builds are stable. Set `SMART_STREETS_GENERATED_AT` if you intentionally refresh the source snapshot.
+
+Rebuild the frontage lookup with `npm run geocode:data`. This uses pinned city geometry, Census responses, and an accepted county fallback cache without network calls or API keys. County data is considered only after city and Census methods fail; it never replaces a successful first-method match. See [county fallback findings](COUNTY-GEOCODING.md). `npm run test:data` verifies matching edge cases, every point's frontage segment, and aggregate totals. See the source notes for intentional reference-data refresh options.
+
+To normalize a new delivery, install `openpyxl` in a local Python environment, then use:
+
+```bash
+python3 packages/data/scripts/prepare-smart-streets-foia.py \
+  --smart-streets /path/to/FOIA_Cannon_A52020_20260915.xlsx \
+  --illegal-parking /path/to/_P197426_Illegal_Parking.xlsx \
+  --previous packages/data/source/previous/FOIA_Cannon_A52020_20260702.csv \
+  --output-dir /path/to/new-snapshot
+```
+
+The XLSX files are copied unchanged. Review reconciliation and geocoding exceptions before replacing committed inputs. Both build scripts currently name this delivery explicitly; update those filenames when accepting a future delivery.
 
 ## Build For Deployment
 
@@ -90,6 +111,7 @@ The static site is emitted to `apps/web/dist/`.
 
 - Violations are from a Chicago Department of Finance FOIA export obtained by Alex Cannon.
 - Listed fines sum the FOIA `Fine Level 1` values; they do not measure payment, collection, or adjudication outcomes.
-- Ticket addresses and Smart Streets zone polygons were geocoded by Alex Cannon.
+- Ticket points are estimated on their named frontage streets using city address ranges, with validated cached Census matches for gaps and county address/parcel frontage projections only for remaining failures. Unresolved records stay in totals and charts. Zone polygons were supplied by Alex Cannon.
+- Conventional tickets are citywide and have masked block locations; they remain separate from Smart Streets totals. Their reporting period and broader bus/taxi/carriage category prevent equivalent-exposure or causal comparisons.
 - Issued dates are treated as Chicago local wall time because the source CSV does not include timezone offsets.
 - The analysis is provided as-is for informational and reproducibility purposes.

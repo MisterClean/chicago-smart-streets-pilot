@@ -1,0 +1,99 @@
+{
+  "streetSource": "https://data.cityofchicago.org/resource/pr57-gg9e.json",
+  "streetSnapshotDate": "2026-10-02",
+  "countyPolicy": "unresolved_only",
+  "countyRetrievedOn": "2026-10-02",
+  "countyProjection": "EPSG:26971 (NAD83 / Illinois East, meters)",
+  "countyCachedLocations": 69,
+  "censusBenchmark": "Public_AR_Current",
+  "censusRetrievedOn": "2026-10-02",
+  "censusCachedAddresses": 2854,
+  "streetSnapshotSha256": "aa2ccd5bf6eac86b789c2d4c9b711738b98f6f7f3ae9d37982db89db69b8d726",
+  "streetSegments": 56338,
+  "smartStreets": {
+    "uniqueLocations": 15472,
+    "records": 130788,
+    "matchedLocations": 14745,
+    "mappedRecords": 128017,
+    "methods": {
+      "unresolved": {
+        "locations": 727,
+        "records": 2771
+      },
+      "street_interpolation": {
+        "locations": 12605,
+        "records": 118628
+      },
+      "census_street_projection": {
+        "locations": 2071,
+        "records": 8399
+      },
+      "county_address_point_projection": {
+        "locations": 54,
+        "records": 905
+      },
+      "county_parcel_centroid_projection": {
+        "locations": 15,
+        "records": 85
+      }
+    },
+    "reasons": {
+      "no_address_range_match": {
+        "locations": 480,
+        "records": 1985
+      },
+      "street_not_found": {
+        "locations": 246,
+        "records": 785
+      },
+      "unparsed_address": {
+        "locations": 1,
+        "records": 1
+      }
+    },
+    "movedOver100m": 743
+  },
+  "illegalParking": {
+    "uniqueLocations": 5538,
+    "records": 43745,
+    "matchedLocations": 3987,
+    "mappedRecords": 32104,
+    "methods": {
+      "unresolved": {
+        "locations": 1551,
+        "records": 11641
+      },
+      "block_estimate": {
+        "locations": 3987,
+        "records": 32104
+      }
+    },
+    "reasons": {
+      "missing_location": {
+        "locations": 1,
+        "records": 8392
+      },
+      "unparsed_address": {
+        "locations": 231,
+        "records": 812
+      },
+      "no_address_range_match": {
+        "locations": 245,
+        "records": 443
+      },
+      "street_not_found": {
+        "locations": 1037,
+        "records": 1521
+      },
+      "ambiguous_block": {
+        "locations": 29,
+        "records": 306
+      },
+      "ambiguous_street": {
+        "locations": 8,
+        "records": 167
+      }
+    },
+    "movedOver100m": 0
+  }
+}

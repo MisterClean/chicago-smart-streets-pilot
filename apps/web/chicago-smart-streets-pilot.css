@@ -523,7 +523,236 @@
 }
 
 .streets-time-layout {
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    grid-template-columns: minmax(0, 1fr);
+    width: min(1500px, calc(100vw - 2rem));
+    margin-left: 50%;
+    transform: translateX(-50%);
+}
+
+.streets-timing-card {
+    min-width: 0;
+}
+
+#streets-timing-heatmap {
+    --streets-heat-color: var(--streets-blue);
+    padding: 0.45rem 1.25rem 1.15rem;
+}
+
+#streets-timing-heatmap[data-metric="fines"] {
+    --streets-heat-color: var(--streets-green);
+}
+
+.streets-heatmap-scroll {
+    width: 100%;
+    overflow-x: clip;
+    padding: 0.15rem 0 0.55rem;
+    contain: paint;
+}
+
+.streets-timing-table {
+    width: 100%;
+    min-width: 0;
+    border-collapse: separate;
+    border-spacing: clamp(1px, 0.18vw, 2px);
+    table-layout: fixed;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.streets-timing-table .streets-day-column {
+    width: clamp(32px, 4.2vw, 62px);
+}
+
+.streets-timing-table .streets-day-total-column {
+    width: clamp(62px, 8vw, 112px);
+}
+
+.streets-timing-table th,
+.streets-timing-table td {
+    padding: 0;
+}
+
+.streets-hour-heading,
+.streets-day-heading,
+.streets-total-heading,
+.streets-hour-total-label {
+    font-size: 0.68rem;
+    font-weight: 750;
+    line-height: 1.1;
+}
+
+.streets-hour-heading {
+    padding-bottom: 0.3rem !important;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.streets-hour-label-compact {
+    display: none;
+}
+
+.streets-day-heading,
+.streets-hour-total-label {
+    padding-right: 0.4rem !important;
+    color: var(--fg);
+    text-align: left;
+    white-space: nowrap;
+}
+
+.streets-day-heading {
+    font-size: clamp(0.54rem, 1vw, 0.76rem);
+}
+
+.streets-corner-heading {
+    color: var(--muted);
+    font-size: 0.66rem;
+    text-transform: uppercase;
+}
+
+.streets-heatmap-data {
+    vertical-align: middle;
+}
+
+.streets-heat-cell {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--fg) 10%, transparent);
+    border-radius: clamp(1px, 0.22vw, 3px);
+    background: color-mix(in srgb, var(--streets-heat-color) var(--streets-heat-intensity, 0%), var(--bg));
+    appearance: none;
+    cursor: pointer;
+    transition: border-color 0.12s ease, filter 0.12s ease, transform 0.12s ease;
+}
+
+.streets-heat-cell:hover {
+    z-index: 1;
+    border-color: color-mix(in srgb, var(--fg) 48%, transparent);
+    filter: brightness(1.06);
+    transform: scale(1.08);
+}
+
+.streets-heat-cell:focus-visible {
+    position: relative;
+    z-index: 2;
+    border-color: var(--fg);
+    outline: 3px solid color-mix(in srgb, var(--fg) 80%, transparent);
+    outline-offset: 1px;
+}
+
+.streets-timing-total {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.streets-timing-total strong,
+.streets-timing-total span {
+    display: block;
+    white-space: nowrap;
+}
+
+.streets-timing-total strong {
+    color: var(--fg);
+    font-weight: 760;
+}
+
+.streets-timing-total span {
+    margin-top: 0.12rem;
+    color: var(--muted);
+    font-size: 0.6rem;
+}
+
+.streets-day-total,
+.streets-grand-total {
+    padding-left: clamp(0.2rem, 0.8vw, 0.55rem) !important;
+}
+
+.streets-day-total {
+    text-align: right;
+}
+
+.streets-day-total strong,
+.streets-grand-total strong {
+    font-size: clamp(0.56rem, 0.9vw, 0.72rem);
+}
+
+.streets-total-heading {
+    padding-bottom: 0.3rem !important;
+    color: var(--muted);
+    font-size: 0.66rem;
+    text-align: right;
+    text-transform: uppercase;
+}
+
+.streets-timing-table tfoot th,
+.streets-timing-table tfoot td {
+    padding-top: 0.55rem;
+    border-top: 1px solid var(--streets-border);
+}
+
+.streets-hour-total strong {
+    overflow: visible;
+    font-size: clamp(0.52rem, 0.7vw, 0.65rem);
+    letter-spacing: -0.09em;
+}
+
+.streets-hour-total span {
+    font-size: clamp(0.5rem, 0.62vw, 0.58rem);
+}
+
+.streets-hour-total-label {
+    color: var(--muted);
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    white-space: normal;
+}
+
+.streets-grand-total {
+    text-align: right;
+}
+
+.streets-heatmap-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+    align-items: center;
+    justify-content: flex-end;
+    min-height: 1.15rem;
+    margin-top: 0.35rem;
+}
+
+.streets-heatmap-legend {
+    display: inline-flex;
+    gap: 0.3rem;
+    align-items: center;
+    color: var(--muted);
+    font-size: 0.68rem;
+    line-height: 1;
+}
+
+.streets-heat-gradient {
+    width: clamp(4.5rem, 10vw, 7rem);
+    height: 0.78rem;
+    border: 1px solid color-mix(in srgb, var(--fg) 10%, transparent);
+    border-radius: 2px;
+    background: linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--streets-heat-color) 0%, var(--bg)),
+        color-mix(in srgb, var(--streets-heat-color) 100%, var(--bg))
+    );
+}
+
+.streets-visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    clip-path: inset(50%) !important;
+    border: 0 !important;
+    white-space: nowrap !important;
 }
 
 .streets-analysis-panel {
@@ -1127,6 +1356,39 @@
     }
 }
 
+@media (max-width: 1300px) {
+    .streets-hour-total {
+        position: relative;
+        height: 5.6rem;
+        vertical-align: bottom;
+    }
+
+    .streets-hour-total-stack {
+        position: absolute;
+        bottom: 0.25rem;
+        left: calc(50% + 0.3rem);
+        display: flex;
+        gap: 0.2rem;
+        align-items: baseline;
+        width: max-content;
+        transform: rotate(-90deg);
+        transform-origin: left bottom;
+    }
+
+    .streets-hour-total-stack strong,
+    .streets-hour-total-stack span {
+        display: inline;
+        margin: 0;
+        font-size: 0.55rem;
+        letter-spacing: -0.04em;
+    }
+
+    .streets-hour-total-stack span::before {
+        margin-right: 0.2rem;
+        content: "·";
+    }
+}
+
 @media (max-width: 1050px) {
     .streets-cards,
     .streets-context-grid {
@@ -1144,6 +1406,7 @@
     .streets-side-panel {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
 }
 
 @media (max-width: 720px) {
@@ -1170,6 +1433,14 @@
         padding: 1.05rem 1rem 0.45rem;
     }
 
+    #streets-timing-heatmap {
+        padding: 0.35rem 0.45rem 1rem;
+    }
+
+    .streets-heatmap-meta {
+        justify-content: flex-end;
+    }
+
     .streets-svg-wrap {
         padding: 0.55rem 0.85rem 0.95rem;
     }
@@ -1188,4 +1459,42 @@
         grid-template-columns: minmax(4.6rem, auto) minmax(0, 1fr) minmax(5.8rem, auto);
         gap: 0.45rem;
     }
+}
+
+@media (max-width: 520px) {
+    .streets-hour-label-full {
+        display: none;
+    }
+
+    .streets-hour-label-compact {
+        display: inline;
+    }
+
+    .streets-hour-heading {
+        padding-bottom: 0.2rem !important;
+        font-size: 0.46rem;
+        letter-spacing: -0.03em;
+    }
+
+    .streets-day-heading,
+    .streets-hour-total-label {
+        padding-right: 0.12rem !important;
+    }
+
+    .streets-corner-heading,
+    .streets-total-heading,
+    .streets-hour-total-label {
+        font-size: 0.5rem;
+    }
+
+    .streets-timing-total span {
+        font-size: 0.5rem;
+    }
+
+    .streets-heat-cell:hover {
+        transform: none;
+    }
+}
+.streets-refresh-note {
+    margin: 16px 0 24px;
 }

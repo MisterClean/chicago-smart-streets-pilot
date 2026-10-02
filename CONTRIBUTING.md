@@ -9,11 +9,13 @@ Run these before opening a pull request:
 ```bash
 npm ci
 npm run build:data
+npm run geocode:data
+npm run test:data
 npm run build
 npm run check:private-refs
 ```
 
-The data build should be deterministic. If your change updates source inputs, document the source snapshot and why it changed.
+The data and geocoding builds should be deterministic with the pinned sources and Census cache. If your change updates source inputs, document the source snapshot, reconciliation, map coverage, and why it changed. Do not force unmatched addresses onto nearby roads. See `packages/data/source/SOURCE-NOTES.md`.
 
 ## Data And Secrets
 
